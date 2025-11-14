@@ -1,3 +1,4 @@
+import query from '@tanstack/eslint-plugin-query';
 import { defineConfig } from 'eslint/config';
 import next from 'eslint-config-next';
 import coreWebVitals from 'eslint-config-next/core-web-vitals';
@@ -8,7 +9,13 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort';
 
 export default defineConfig([
   {
-    extends: [next, coreWebVitals, typescript, prettierConfig],
+    extends: [
+      next,
+      coreWebVitals,
+      typescript,
+      prettierConfig,
+      query.configs['flat/recommended'],
+    ],
     plugins: {
       prettier,
       'simple-import-sort': simpleImportSort,
