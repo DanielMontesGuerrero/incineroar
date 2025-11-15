@@ -6,6 +6,7 @@ import typescript from 'eslint-config-next/typescript';
 import prettierConfig from 'eslint-config-prettier';
 import prettier from 'eslint-plugin-prettier';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import tsEslint from 'typescript-eslint';
 
 export default defineConfig([
   {
@@ -43,4 +44,14 @@ export default defineConfig([
       semi: ['error', 'always'],
     },
   },
+  ...defineConfig({
+    files: ['**/*.ts', '**/*.tsx'],
+    extends: [...tsEslint.configs.recommendedTypeChecked],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  }),
 ]);
