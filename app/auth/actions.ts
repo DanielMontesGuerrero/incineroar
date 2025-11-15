@@ -13,6 +13,8 @@ import { FormActionState } from '@/src/types/form';
 const signUpDataSchema = z.object({
   username: z
     .string()
+    .trim()
+    .refine((s) => !/\s/.test(s), 'Username can not contain whitespace')
     .min(4, 'Username must be at least 4 characters')
     .max(20, 'Username must be at most 10 characters'),
   password: z
