@@ -1,14 +1,12 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Alert, Button, Form, Input } from 'antd';
 import { RuleRender } from 'antd/es/form';
-import { useForm } from 'antd/es/form/Form';
-import FormItem, { FormItemProps } from 'antd/es/form/FormItem';
-import { useActionState, useEffect, useTransition } from 'react';
+import FormItem from 'antd/es/form/FormItem';
+import { useEffect } from 'react';
 
 import FormCard from '@/src/components/FormCard';
-import useFormFeedback from '@/src/hooks/useFormFeedback';
+import useFormAction, { getValidateStatus } from '@/src/hooks/useFormAction';
 import { SignUpData } from '@/src/types/api';
-import { actionToOnFinishAdapter } from '@/src/utils/adapters';
 
 import { signUp, SignUpActionState } from '../actions';
 const SignUpFormItem = FormItem<SignUpData>;
@@ -26,15 +24,10 @@ const INITIAL_STATE: SignUpActionState = {
 };
 
 const SignUpForm = ({ onSignIn }: SignUpFormProps) => {
-  const [state, formAction, isFormPending] = useActionState<
-    SignUpActionState,
-    FormData
-  >(signUp, INITIAL_STATE);
-  const [isTransitionPending, startTransition] = useTransition();
-  const [form] = useForm<SignUpData>();
-
-  const onFinish = (data: SignUpData) =>
-    actionToOnFinishAdapter<SignUpData>(data, formAction, startTransition);
+  const { state, isPending, form, onFinish } = useFormAction<SignUpData>(
+    INITIAL_STATE,
+    signUp,
+  );
 
   const validateSamePassword: RuleRender = ({ getFieldValue }) => ({
     validator: (_, value) => {
@@ -44,17 +37,6 @@ const SignUpForm = ({ onSignIn }: SignUpFormProps) => {
       return Promise.reject(new Error(`The passwords don't match`));
     },
   });
-
-  const getValidateStatus = (
-    key: keyof SignUpData,
-  ): FormItemProps['validateStatus'] => {
-    if (state.success) return 'success';
-    if (state.errors?.[key]?.errors) return 'error';
-    if (isFormPending || isTransitionPending) return 'validating';
-    return '';
-  };
-
-  useFormFeedback(state, form);
 
   useEffect(() => {
     if (state.success) {
@@ -68,26 +50,29 @@ const SignUpForm = ({ onSignIn }: SignUpFormProps) => {
 
   return (
     <FormCard title="FakeOut Labs">
-      <FormItem>
-        {state.error && <Alert message={state.error} type="error" />}
-      </FormItem>
       <Form
         name="signup"
         onFinish={onFinish}
         initialValues={state.data}
         form={form}
       >
+        {state.error && (
+          <FormItem>
+            <Alert message={state.error} type="error" />
+          </FormItem>
+        )}
+
         <SignUpFormItem
           name="username"
           rules={[{ required: true, message: 'Please input your Username!' }]}
-          validateStatus={getValidateStatus('username')}
+          validateStatus={getValidateStatus(state, 'username', isPending)}
         >
           <Input prefix={<UserOutlined />} placeholder="Username" />
         </SignUpFormItem>
         <SignUpFormItem
           name="password"
           rules={[{ required: true, message: 'Please input your Password!' }]}
-          validateStatus={getValidateStatus('password')}
+          validateStatus={getValidateStatus(state, 'password', isPending)}
         >
           <Input
             prefix={<LockOutlined />}

@@ -3,9 +3,10 @@ import { Alert, Button, Form, Input } from 'antd';
 import FormItem from 'antd/es/form/FormItem';
 
 import FormCard from '@/src/components/FormCard';
+import useFormAction, { getValidateStatus } from '@/src/hooks/useFormAction';
 import { SignInData } from '@/src/types/api';
 
-import { signIn } from '../actions';
+import { signIn, SignInActionState } from '../actions';
 
 const SignInFormItem = FormItem<SignInData>;
 
@@ -14,10 +15,32 @@ interface SignInFormProps {
   hasCreatedAccount?: boolean;
 }
 
+const INITIAL_STATE: SignInActionState = {
+  success: false,
+  data: {
+    username: '',
+    password: '',
+  },
+};
+
 const SignInForm = ({ onSignUp, hasCreatedAccount }: SignInFormProps) => {
+  const { state, form, onFinish, isPending } = useFormAction(
+    INITIAL_STATE,
+    signIn,
+  );
+
+  if (state.success) {
+    return <></>;
+  }
+
   return (
     <FormCard title="FakeOut Labs">
-      <Form name="signin" action={signIn}>
+      <Form
+        name="signin"
+        onFinish={onFinish}
+        initialValues={state.data}
+        form={form}
+      >
         {hasCreatedAccount && (
           <FormItem>
             <Alert
@@ -26,15 +49,22 @@ const SignInForm = ({ onSignUp, hasCreatedAccount }: SignInFormProps) => {
             />
           </FormItem>
         )}
+        {state.error && (
+          <FormItem>
+            <Alert message={state.error} type="error" />
+          </FormItem>
+        )}
         <SignInFormItem
           name="username"
           rules={[{ required: true, message: 'Please input your Username!' }]}
+          validateStatus={getValidateStatus(state, 'username', isPending)}
         >
           <Input prefix={<UserOutlined />} placeholder="Username" />
         </SignInFormItem>
         <SignInFormItem
           name="password"
           rules={[{ required: true, message: 'Please input your Password!' }]}
+          validateStatus={getValidateStatus(state, 'password', isPending)}
         >
           <Input
             prefix={<LockOutlined />}

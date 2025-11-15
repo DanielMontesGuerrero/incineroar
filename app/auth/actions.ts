@@ -1,10 +1,13 @@
 'use server';
 
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import DBConnection from '@/src/db/DBConnection';
 import UserRepository, { UserAlreadyExistsError } from '@/src/db/models/user';
-import { SignUpData } from '@/src/types/api';
+import AuthService from '@/src/services/auth';
+import { SignInData, SignUpData } from '@/src/types/api';
 import { FormActionState } from '@/src/types/form';
 
 const signUpDataSchema = z.object({
@@ -18,9 +21,46 @@ const signUpDataSchema = z.object({
     .max(25, 'Password must be at most 25 characters'),
 });
 
-export const signIn = async () => {
-  console.log('connected');
-  return Promise.resolve();
+export type SignInActionState = FormActionState<SignInData>;
+
+export const signIn = async (
+  _initialSignInState: SignInActionState,
+  formData: FormData,
+): Promise<SignInActionState> => {
+  const rawData = {
+    username: formData.get('username') as string,
+    password: formData.get('password') as string,
+  };
+
+  try {
+    await DBConnection.connect();
+
+    const userRepo = new UserRepository();
+    const user = await userRepo.exists(rawData);
+    if (user === undefined) {
+      return {
+        success: false,
+        data: rawData,
+        error: 'Incorrect username or password',
+      };
+    }
+    const authService = new AuthService();
+    const jwt = await authService.createUserJwt(user);
+
+    const cookieStore = await cookies();
+    cookieStore.set('jwt', jwt, { httpOnly: true });
+  } catch (error) {
+    console.error('Failed to sign in user', error);
+    return {
+      success: false,
+      data: rawData,
+      error: 'Error, try again later',
+    };
+  }
+  redirect('/');
+  return {
+    success: true,
+  };
 };
 
 export type SignUpActionState = FormActionState<SignUpData>;

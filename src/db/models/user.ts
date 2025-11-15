@@ -1,7 +1,12 @@
-import { hash } from 'bcrypt';
+import { compare, hash } from 'bcrypt';
 import { Model, models, Schema } from 'mongoose';
 
-import { SignUpData, User } from '@/src/types/api';
+import {
+  SignInData,
+  SignUpData,
+  UnsensitiveUserData,
+  User,
+} from '@/src/types/api';
 
 import DBConnection from '../DBConnection';
 import { BaseRepository } from '../repository';
@@ -36,13 +41,31 @@ export default class UserRepository implements BaseRepository<User> {
 
   async create(user: SignUpData) {
     const sameUsernameCount = await this.model.countDocuments({
-      username: user.username,
+      username: new RegExp(user.username, 'i'),
     });
     if (sameUsernameCount) {
       throw new UserAlreadyExistsError(user);
     }
     user.password = await hash(user.password, UserRepository.HASH_SALTS);
     return await this.model.create(user);
+  }
+
+  async exists({
+    username,
+    password,
+  }: SignInData): Promise<UnsensitiveUserData | undefined> {
+    const user = await this.model.findOne({
+      username: new RegExp(username, 'i'),
+    });
+    if (!user) {
+      return undefined;
+    }
+    const isSamePassword = await compare(password, user.password);
+    if (!isSamePassword) {
+      return undefined;
+    }
+
+    return { username, id: user.id as string };
   }
 }
 
