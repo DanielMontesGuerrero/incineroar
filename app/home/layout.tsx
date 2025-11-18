@@ -6,6 +6,7 @@ import {
   FileDoneOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Flex, Layout, Menu, MenuProps } from 'antd';
 import { Content } from 'antd/lib/layout/layout';
 import Sider from 'antd/lib/layout/Sider';
@@ -17,6 +18,16 @@ import foLabsLogo from '@/public/fo-labs.svg';
 import pokeballIcon from '@/public/pokeball.svg';
 
 import { signOut } from '../actions';
+
+const client = new QueryClient();
+
+const ProvidersWrapper = ({ children }: Readonly<{ children: ReactNode }>) => {
+  return (
+    <QueryClientProvider client={client}>
+      <StyleProvider layer>{children}</StyleProvider>
+    </QueryClientProvider>
+  );
+};
 
 const UpperMenuItems: MenuProps['items'] = [
   {
@@ -49,7 +60,7 @@ const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <StyleProvider layer>
+    <ProvidersWrapper>
       <Layout className="flex h-dvh flex-row">
         <Sider
           width={180}
@@ -67,7 +78,7 @@ const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
                   width={30}
                 />
               ) : (
-                <Title className="text-center text-white">FakeOut Labs</Title>
+                <Title className="ml-3 text-white">FakeOut Labs</Title>
               )}
               <Menu theme="dark" mode="inline" items={UpperMenuItems} />
             </Flex>
@@ -80,7 +91,7 @@ const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
           <Content>{children}</Content>
         </Layout>
       </Layout>
-    </StyleProvider>
+    </ProvidersWrapper>
   );
 };
 

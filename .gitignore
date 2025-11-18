@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Bruno environments (if not meant for sharing or containing sensitive data)
+**/environments/*.bru
+!**/environments/sample-env.bru.sample # Example: if you provide a sample environment
+
+# Bruno secrets files (e.g., if you use a separate file for secrets)
+**/.env
