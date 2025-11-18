@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 import { UserKeys } from '../constants/query-keys';
-import { UnsensitiveUserData } from '../types/api';
+import { User } from '../types/api';
 
-const getUser = async (): Promise<UnsensitiveUserData> => {
-  const result = await axios.get<{ user: UnsensitiveUserData }>('/api/user/me');
+const getUser = async (): Promise<User> => {
+  const result = await axios.get<{ user: User }>('/api/user/me');
   return result.data.user;
 };
 
