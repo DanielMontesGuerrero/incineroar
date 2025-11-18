@@ -1,6 +1,6 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Alert, Button, Form, Input } from 'antd';
-import FormItem from 'antd/es/form/FormItem';
+import FormItem from 'antd/lib/form/FormItem';
 
 import FormCard from '@/src/components/FormCard';
 import useFormAction, { getValidateStatus } from '@/src/hooks/useFormAction';

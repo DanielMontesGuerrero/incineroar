@@ -1,7 +1,7 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Alert, Button, Form, Input } from 'antd';
-import { RuleRender } from 'antd/es/form';
-import FormItem from 'antd/es/form/FormItem';
+import { RuleRender } from 'antd/lib/form';
+import FormItem from 'antd/lib/form/FormItem';
 import { useEffect } from 'react';
 
 import FormCard from '@/src/components/FormCard';
