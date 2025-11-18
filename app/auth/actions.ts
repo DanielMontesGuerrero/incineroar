@@ -59,7 +59,7 @@ export const signIn = async (
       error: 'Error, try again later',
     };
   }
-  redirect('/');
+  redirect('/home');
   return {
     success: true,
   };

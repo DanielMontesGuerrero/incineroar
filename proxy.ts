@@ -2,7 +2,7 @@ import { Route } from 'next';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
-const protectedRoutes: Route[] = ['/dev'];
+const protectedRoutes: Route[] = ['/home'];
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
