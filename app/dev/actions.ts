@@ -1,9 +1,37 @@
 'use server';
 
+import { verifyUserAuth } from '@/src/actions/auth';
 import DBConnection from '@/src/db/DBConnection';
 import TeamRepository from '@/src/db/models/team';
 import UserRepository from '@/src/db/models/user';
 import { CreateTeamData } from '@/src/types/api';
+
+const sampleTeam = `Mimikyu @ Focus Sash  
+Ability: Disguise  
+Tera Type: Ghost  
+
+Vikavolt  
+Ability: Levitate  
+Tera Type: Bug  
+IVs: 0 Atk  
+
+Mudsdale  
+Ability: Stamina  
+Tera Type: Ground  
+IVs: 0 Atk  
+
+Toxapex  
+Ability: Regenerator  
+Tera Type: Poison  
+IVs: 0 Atk  
+
+Celesteela  
+Ability: Beast Boost  
+Tera Type: Steel  
+
+Arcanine  
+Ability: Intimidate  
+Tera Type: Fire`;
 
 export const testTeamsRepository = async () => {
   console.log('Starting script...');
@@ -12,9 +40,10 @@ export const testTeamsRepository = async () => {
 
   const userRepo = new UserRepository();
   const teamRepo = new TeamRepository();
-  const userId = '6918427a24f8d1be9da0afd3';
+  const { id: userId } = await verifyUserAuth();
+
   const newTeamData: CreateTeamData = {
-    data: 'data',
+    data: sampleTeam,
     tags: ['tag 1', 'tag 2'],
     name: `team created on ${new Date().toLocaleString()}`,
     description: 'My description',

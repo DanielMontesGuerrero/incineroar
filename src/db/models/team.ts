@@ -1,5 +1,6 @@
 import { Model, models, Schema } from 'mongoose';
 
+import TeamService from '@/src/services/pokemon/team';
 import { CreateTeamData, Team } from '@/src/types/api';
 
 import DBConnection from '../DBConnection';
@@ -17,7 +18,17 @@ export const TeamSchema = new Schema<Team>(
     description: { type: String, required: true },
   },
   {
+    id: true,
     toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+    virtuals: {
+      parsedTeam: {
+        get: function () {
+          const teamsService = new TeamService();
+          return teamsService.parseTeam(this.data as string);
+        },
+      },
+    },
   },
 );
 
@@ -31,15 +42,15 @@ export default class TeamRepository implements CRUDRepository<Team> {
   }
 
   async getById(id: string): Promise<Team> {
-    const team = await this.model.findById(id).lean();
+    const team = await this.model.findById(id);
     if (!team) {
       throw new TeamNotFoundError(id);
     }
-    return team;
+    return team.toObject();
   }
 
   async create(team: CreateTeamData): Promise<Team> {
-    return await this.model.create(team);
+    return (await this.model.create(team)).toObject();
   }
 
   async updateById(
@@ -52,7 +63,7 @@ export default class TeamRepository implements CRUDRepository<Team> {
     if (!team) {
       throw new TeamNotFoundError(id);
     }
-    return team;
+    return team.toObject();
   }
 
   async deleteById(id: string) {

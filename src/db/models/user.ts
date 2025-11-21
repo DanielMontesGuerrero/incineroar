@@ -23,7 +23,9 @@ const UserSchema = new Schema<User>(
     teams: [{ type: Schema.Types.ObjectId, ref: TeamModelName }],
   },
   {
+    id: true,
     toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   },
 );
 
@@ -45,7 +47,7 @@ export default class UserRepository implements BaseRepository<User> {
       throw new UserNotFoundError(id);
     }
     await user.populate('teams');
-    return user;
+    return user.toObject();
   }
 
   async create(user: SignUpData) {
@@ -56,7 +58,7 @@ export default class UserRepository implements BaseRepository<User> {
       throw new UserAlreadyExistsError(user);
     }
     user.password = await hash(user.password, UserRepository.HASH_SALTS);
-    return await this.model.create({ ...user, teams: [] });
+    return (await this.model.create({ ...user, teams: [] })).toObject();
   }
 
   async exists({

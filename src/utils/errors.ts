@@ -11,6 +11,6 @@ export class MissingConfigError extends Error {
 
 export class MissingDBConnectionError extends Error {
   constructor() {
-    super('Not connected to DB');
+    super('Not connected to DB, did you call DBConnection.connect()?');
   }
 }
