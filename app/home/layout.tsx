@@ -7,11 +7,12 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Flex, Layout, Menu, MenuProps } from 'antd';
+import { ConfigProvider, Flex, Layout, Menu, MenuProps, theme } from 'antd';
 import { Content } from 'antd/lib/layout/layout';
 import Sider from 'antd/lib/layout/Sider';
 import Title from 'antd/lib/typography/Title';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { ReactNode, useState } from 'react';
 
 import foLabsLogo from '@/public/fo-labs.svg';
@@ -24,40 +25,44 @@ const client = new QueryClient();
 const ProvidersWrapper = ({ children }: Readonly<{ children: ReactNode }>) => {
   return (
     <QueryClientProvider client={client}>
-      <StyleProvider layer>{children}</StyleProvider>
+      <ConfigProvider theme={{ algorithm: theme.darkAlgorithm }}>
+        <StyleProvider layer>{children}</StyleProvider>
+      </ConfigProvider>
     </QueryClientProvider>
   );
 };
 
-const UpperMenuItems: MenuProps['items'] = [
-  {
-    label: 'Teams',
-    key: 'teams',
-    icon: <Image src={pokeballIcon as string} alt="pokeball" width={14} />,
-  },
-  {
-    label: 'Metagame',
-    key: 'metagame',
-    icon: <DotChartOutlined />,
-  },
-  {
-    label: 'Team judge',
-    key: 'team-judge',
-    icon: <FileDoneOutlined />,
-  },
-];
-
-const LowerMenuItems: MenuProps['items'] = [
-  {
-    label: 'Sign out',
-    key: 'signout',
-    icon: <LogoutOutlined />,
-    onClick: () => void signOut(),
-  },
-];
-
 const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
   const [collapsed, setCollapsed] = useState(false);
+  const router = useRouter();
+
+  const UpperMenuItems: MenuProps['items'] = [
+    {
+      label: 'Teams',
+      key: 'teams',
+      icon: <Image src={pokeballIcon as string} alt="pokeball" width={14} />,
+      onClick: () => router.push('/home/teams'),
+    },
+    {
+      label: 'Metagame',
+      key: 'metagame',
+      icon: <DotChartOutlined />,
+    },
+    {
+      label: 'Team judge',
+      key: 'team-judge',
+      icon: <FileDoneOutlined />,
+    },
+  ];
+
+  const LowerMenuItems: MenuProps['items'] = [
+    {
+      label: 'Sign out',
+      key: 'signout',
+      icon: <LogoutOutlined />,
+      onClick: () => void signOut(),
+    },
+  ];
 
   return (
     <ProvidersWrapper>
@@ -88,7 +93,7 @@ const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
           </Flex>
         </Sider>
         <Layout>
-          <Content>{children}</Content>
+          <Content className="p-3">{children}</Content>
         </Layout>
       </Layout>
     </ProvidersWrapper>
