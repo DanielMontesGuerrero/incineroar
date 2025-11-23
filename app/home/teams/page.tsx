@@ -1,24 +1,31 @@
 'use client';
 
-import { MoreOutlined, PlusCircleOutlined } from '@ant-design/icons';
+import { MoreOutlined } from '@ant-design/icons';
 import { Button, Col, Dropdown, Row, Table, TableProps } from 'antd';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
+import { useDeleteTeamMutation } from '@/src/hooks/team-mutations';
 import useUserQuery from '@/src/hooks/useUserQuery';
 import { Team } from '@/src/types/api';
 
+import { ImportTeamModal } from './components/TeamModals';
 import TeamPreview from './components/TeamPreview';
 
 const TeamsTable = Table<Team>;
 
-const ActionsMenu = () => {
+interface ActionsMenuProps {
+  teamId: string;
+}
+
+const ActionsMenu = ({ teamId }: ActionsMenuProps) => {
+  const { mutate } = useDeleteTeamMutation(teamId);
   return (
     <Dropdown
       menu={{
         items: [
           { label: 'Edit', key: 'edit' },
-          { label: 'Delete', key: 'delete' },
+          { label: 'Delete', key: 'delete', onClick: () => mutate() },
         ],
       }}
     >
@@ -53,7 +60,7 @@ const COLUMNS: TableProps<Team>['columns'] = [
   {
     title: 'Actions',
     key: 'acions',
-    render: () => <ActionsMenu />,
+    render: (_, { id }) => <ActionsMenu teamId={id} />,
   },
 ];
 
@@ -77,9 +84,7 @@ const Page = () => {
     <>
       <Row className="mb-3">
         <Col>
-          <Button type="primary" icon={<PlusCircleOutlined />}>
-            Import team
-          </Button>
+          <ImportTeamModal />
         </Col>
       </Row>
       <Row>

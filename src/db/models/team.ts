@@ -15,7 +15,7 @@ export const TeamSchema = new Schema<Team>(
     regulation: { type: String, required: true },
     tags: [{ type: String, required: true }],
     name: { type: String, required: true },
-    description: { type: String, required: true },
+    description: { type: String },
   },
   {
     id: true,

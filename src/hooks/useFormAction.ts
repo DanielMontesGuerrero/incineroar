@@ -9,6 +9,8 @@ import {
 
 import { FormActionState } from '../types/form';
 
+type FormValue = string | Blob | string[] | number;
+
 export const getValidateStatus = <T>(
   state: FormActionState<T>,
   key: keyof T,
@@ -20,24 +22,31 @@ export const getValidateStatus = <T>(
   return '';
 };
 
-export const actionToOnFinishAdapter = <
-  T extends { [key: string]: string | Blob },
->(
+export const actionToOnFinishAdapter = <T extends { [key: string]: FormValue }>(
   values: T,
   formAction: (payload: FormData) => void,
   startTransition: TransitionStartFunction,
 ) => {
   const formData = new FormData();
   Object.keys(values).forEach((key) => {
-    formData.append(key, values[key as keyof T]);
+    const value = values[key as keyof T];
+    if (Array.isArray(value)) {
+      formData.append(key, JSON.stringify(value));
+      return;
+    }
+    if (typeof value === 'number') {
+      formData.append(key, value.toString());
+      return;
+    }
+    formData.append(key, value);
   });
   startTransition(() => {
     formAction(formData);
   });
 };
 
-const useFormAction = <T extends { [key: string]: string | Blob }>(
-  initialSate: FormActionState<T>,
+const useFormAction = <T extends { [key: string]: FormValue }>(
+  initial: FormActionState<T>,
   action: (
     state: Awaited<FormActionState<T>>,
     payload: FormData,
@@ -46,7 +55,7 @@ const useFormAction = <T extends { [key: string]: string | Blob }>(
   const [state, formAction, isFormPending] = useActionState<
     FormActionState<T>,
     FormData
-  >(action, initialSate);
+  >(action, initial);
   const [isTransitionPending, startTransition] = useTransition();
   const [form] = useForm<T>();
 
