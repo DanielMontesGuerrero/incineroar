@@ -10,7 +10,7 @@
     "lint:fix": "eslint --fix",
     "test": "jest",
     "db:build": "docker build -t incineroar-db-image:$(npm pkg get version | tr -d '\"') -f Dockerfile.db .",
-    "db:run": "docker start incineroar-db || docker run -d -p 27017:27017 --name incineroar-db incineroar-db-image:$(npm pkg get version | tr -d '\"')"
+    "db:run": "docker start incineroar-db 2>/dev/null || docker run -d -p 27017:27017 --name incineroar-db incineroar-db-image:$(npm pkg get version | tr -d '\"')"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^1.24.0",
