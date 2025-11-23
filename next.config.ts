@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        ...(process.env.ALLOWED_ORIGINS || '').split(','),
+      ],
+    },
+  },
 };
 
 export default nextConfig;
