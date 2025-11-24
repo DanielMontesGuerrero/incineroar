@@ -115,7 +115,6 @@ const Page = () => {
           team={editTeam}
         />
       )}
-      ;
     </>
   );
 };

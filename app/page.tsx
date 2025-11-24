@@ -1,5 +1,5 @@
 import { Layout } from 'antd';
-import { Content } from 'antd/lib/layout/layout';
+import { Content } from 'antd/es/layout/layout';
 
 import Welcome from '@/src/components/Welcome';
 

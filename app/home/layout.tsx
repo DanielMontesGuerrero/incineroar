@@ -8,9 +8,9 @@ import {
 } from '@ant-design/icons';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider, Flex, Layout, Menu, MenuProps, theme } from 'antd';
-import { Content } from 'antd/lib/layout/layout';
-import Sider from 'antd/lib/layout/Sider';
-import Title from 'antd/lib/typography/Title';
+import { Content } from 'antd/es/layout/layout';
+import Sider from 'antd/es/layout/Sider';
+import Title from 'antd/es/typography/Title';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ReactNode, useState } from 'react';

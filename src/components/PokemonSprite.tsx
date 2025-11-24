@@ -1,4 +1,4 @@
-import SkeletonAvatar from 'antd/lib/skeleton/Avatar';
+import SkeletonAvatar from 'antd/es/skeleton/Avatar';
 import Image, { ImageProps } from 'next/image';
 
 import usePokemonQuery from '../hooks/usePokemonQuery';

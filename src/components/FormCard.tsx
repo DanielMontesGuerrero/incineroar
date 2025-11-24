@@ -1,5 +1,5 @@
 import { Card, Col, Row } from 'antd';
-import Title from 'antd/lib/typography/Title';
+import Title from 'antd/es/typography/Title';
 import { PropsWithChildren } from 'react';
 
 interface FormCardProps extends PropsWithChildren {
