@@ -12,7 +12,7 @@ import {
 
 import DBConnection from '../DBConnection';
 import { BaseRepository } from '../repository';
-import TeamRepository, { TeamModelName } from './team';
+import TeamRepository, { TeamModelName, TeamNotFoundError } from './team';
 
 const UserModelName = 'User';
 
@@ -98,6 +98,16 @@ export default class UserRepository implements BaseRepository<User> {
       },
     );
     await this.teamRepository.deleteById(teamId);
+  }
+
+  async getTeamById(userId: string, teamId: string): Promise<Team> {
+    const user = await this.model.findById(userId).populate('teams');
+    if (!user) throw new UserNotFoundError(userId);
+    const team = user.teams.find((team) => team.id === teamId);
+    if (!team) {
+      throw new TeamNotFoundError(teamId);
+    }
+    return team;
   }
 }
 
