@@ -56,3 +56,34 @@ export type CreateTournamentData = Omit<
 > & {
   teams: Omit<TournamentTeam, 'team'>[];
 };
+
+export interface Usage<T = string> {
+  value: T;
+  percentage: number;
+}
+
+export interface EvUsage {
+  stat: keyof PokemonSet['evs'];
+  values: Usage<number>[];
+  average: number;
+}
+
+export interface PokemonAnalytics {
+  species: string;
+  usage: number;
+  abilities: Usage[];
+  items: Usage[];
+  moves: Usage[];
+  teraTypes: Usage[];
+  evs: EvUsage[];
+}
+
+export interface TeamAnalytics {
+  usage: number;
+  pokemon: string[];
+}
+
+export interface AnalyticsResponse {
+  pokemon: PokemonAnalytics[];
+  cores: Record<number, TeamAnalytics[]>;
+}
