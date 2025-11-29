@@ -13,8 +13,10 @@ const Welcome = ({ showEnter }: WelcomeProps) => {
   return (
     <Flex vertical justify="center" align="center" className="h-full">
       <Image src={foLabsLogo as string} alt="fakeout labs" width={300} />
-      <Title>FakeOut Labs</Title>
-      <Typography>Tools for pokemon battling</Typography>
+      <Title style={{ color: 'white' }}>FakeOut Labs</Title>
+      <Typography style={{ color: 'white' }}>
+        Tools for pokemon battling
+      </Typography>
       {showEnter && <Link href="/auth">Enter</Link>}
     </Flex>
   );

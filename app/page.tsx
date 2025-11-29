@@ -6,7 +6,7 @@ import Welcome from '@/src/components/Welcome';
 const Home = () => {
   return (
     <Layout>
-      <Content className="h-dvh">
+      <Content className="h-dvh bg-black">
         <Welcome showEnter />
       </Content>
     </Layout>

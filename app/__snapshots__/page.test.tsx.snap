@@ -6,7 +6,7 @@ exports[`Page renders homepage unchanged 1`] = `
     class="ant-layout css-dev-only-do-not-override-kk2c0l"
   >
     <main
-      class="ant-layout-content h-dvh css-dev-only-do-not-override-kk2c0l"
+      class="ant-layout-content h-dvh bg-black css-dev-only-do-not-override-kk2c0l"
     >
       <div
         class="h-full ant-flex css-dev-only-do-not-override-kk2c0l ant-flex-align-center ant-flex-justify-center ant-flex-vertical"
@@ -24,11 +24,13 @@ exports[`Page renders homepage unchanged 1`] = `
         />
         <h1
           class="ant-typography css-dev-only-do-not-override-kk2c0l"
+          style="color: white;"
         >
           FakeOut Labs
         </h1>
         <article
           class="ant-typography css-dev-only-do-not-override-kk2c0l"
+          style="color: white;"
         >
           Tools for pokemon battling
         </article>
