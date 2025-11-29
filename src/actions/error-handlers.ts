@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { ErrorResponse } from '../types/api';
 import { MissingDBConnectionError } from '../utils/errors';
@@ -6,6 +6,7 @@ import { UnauthenticatedError, UnauthorizedError } from './auth';
 
 export const baseErrorHandler = (
   error: unknown,
+  _req: NextRequest,
 ): NextResponse<ErrorResponse> => {
   if (error instanceof UnauthenticatedError) {
     return NextResponse.json<ErrorResponse>(

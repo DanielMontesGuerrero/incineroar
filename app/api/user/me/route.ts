@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { verifyUserAuth } from '@/src/actions/auth';
 import { baseErrorHandler } from '@/src/actions/error-handlers';
@@ -6,9 +6,9 @@ import DBConnection from '@/src/db/DBConnection';
 import UserRepository from '@/src/db/models/user';
 import { ErrorResponse, ExposedUser } from '@/src/types/api';
 
-export const GET = async (): Promise<
-  NextResponse<{ user: ExposedUser } | ErrorResponse>
-> => {
+export const GET = async (
+  req: NextRequest,
+): Promise<NextResponse<{ user: ExposedUser } | ErrorResponse>> => {
   try {
     await DBConnection.connect();
     const userRepo = new UserRepository();
@@ -18,6 +18,6 @@ export const GET = async (): Promise<
     return NextResponse.json({ user });
   } catch (error) {
     console.error('Failed to get user', error);
-    return baseErrorHandler(error);
+    return baseErrorHandler(error, req);
   }
 };

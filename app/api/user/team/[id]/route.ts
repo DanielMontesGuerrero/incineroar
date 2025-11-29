@@ -5,12 +5,12 @@ import { baseErrorHandler } from '@/src/actions/error-handlers';
 import DBConnection from '@/src/db/DBConnection';
 import { TeamNotFoundError } from '@/src/db/models/team';
 import UserRepository from '@/src/db/models/user';
-import { ErrorResponse } from '@/src/types/api';
+import { ErrorResponse, Team } from '@/src/types/api';
 
 export const GET = async (
   req: NextRequest,
   ctx: RouteContext<'/api/user/team/[id]'>,
-): Promise<NextResponse | ErrorResponse> => {
+): Promise<NextResponse<{ team: Team } | ErrorResponse>> => {
   try {
     await DBConnection.connect();
     const userRepo = new UserRepository();
@@ -30,14 +30,14 @@ export const GET = async (
         },
       );
     }
-    return baseErrorHandler(error);
+    return baseErrorHandler(error, req);
   }
 };
 
 export const DELETE = async (
   req: NextRequest,
   ctx: RouteContext<'/api/user/team/[id]'>,
-): Promise<NextResponse | ErrorResponse> => {
+): Promise<NextResponse<{ success: true } | ErrorResponse>> => {
   try {
     await DBConnection.connect();
     const userRepo = new UserRepository();
@@ -50,6 +50,6 @@ export const DELETE = async (
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(`Failed to delete team`, error);
-    return baseErrorHandler(error);
+    return baseErrorHandler(error, req);
   }
 };

@@ -2,6 +2,8 @@ import { Route } from 'next';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { verifyUserAuth } from './src/actions/auth';
+
 const protectedRoutes: Route[] = ['/home'];
 const authRoute: Route = '/auth';
 
@@ -13,6 +15,13 @@ const protectedRouteProxy = async (req: NextRequest) => {
   const cookieStore = await cookies();
   const jwt = cookieStore.get('jwt');
   if (!jwt) {
+    return NextResponse.redirect(new URL('/auth', req.nextUrl));
+  }
+  try {
+    await verifyUserAuth();
+  } catch (err) {
+    console.error('Invalid jwt', err);
+    cookieStore.delete('jwt');
     return NextResponse.redirect(new URL('/auth', req.nextUrl));
   }
   return NextResponse.next();

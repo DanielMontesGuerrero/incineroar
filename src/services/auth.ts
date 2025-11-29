@@ -1,4 +1,5 @@
 import { importPKCS8, importSPKI, jwtVerify, SignJWT } from 'jose';
+import { JWTClaimValidationFailed, JWTExpired, JWTInvalid } from 'jose/errors';
 
 import { UnsensitiveUserData } from '../types/api';
 import { MissingConfigError } from '../utils/errors';
@@ -69,6 +70,13 @@ export default class AuthService {
       };
     } catch (error) {
       console.error('Failed to verify jwt', error);
+      if (
+        error instanceof JWTExpired ||
+        error instanceof JWTInvalid ||
+        error instanceof JWTClaimValidationFailed
+      ) {
+        throw error;
+      }
       return { verified: false };
     }
   }
