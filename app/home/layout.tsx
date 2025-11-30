@@ -7,17 +7,48 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ConfigProvider, Flex, Layout, Menu, MenuProps, theme } from 'antd';
+import {
+  Breadcrumb,
+  Col,
+  ConfigProvider,
+  Flex,
+  Layout,
+  Menu,
+  MenuProps,
+  Row,
+  theme,
+} from 'antd';
 import { Content } from 'antd/es/layout/layout';
 import Sider from 'antd/es/layout/Sider';
 import Title from 'antd/es/typography/Title';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ReactNode, useState } from 'react';
+import { PropsWithChildren, ReactNode, useState } from 'react';
 
 import foLabsLogo from '@/public/fo-labs.svg';
 import pokeballIcon from '@/public/pokeball.svg';
 import { queryClient } from '@/src/utils/query-clients';
+
+const ContentLayout = ({ children }: PropsWithChildren) => {
+  const breadcrumbs = useBreadcrumbs();
+
+  return (
+    <Flex vertical gap={30} className="h-full">
+      {breadcrumbs.length > 1 && (
+        <section>
+          <Row>
+            <Col>
+              <Breadcrumb items={breadcrumbs} />
+            </Col>
+          </Row>
+        </section>
+      )}
+      <section className="h-full overflow-y-auto">{children}</section>
+    </Flex>
+  );
+};
+
+import useBreadcrumbs from '@/src/hooks/useBreadcrumbs';
 
 import { signOut } from '../actions';
 
@@ -46,6 +77,7 @@ const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
       label: 'Metagame',
       key: 'metagame',
       icon: <DotChartOutlined />,
+      onClick: () => router.push('/home/metagame'),
     },
     {
       label: 'Team judge',
@@ -92,7 +124,9 @@ const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
           </Flex>
         </Sider>
         <Layout>
-          <Content className="h-full p-3">{children}</Content>
+          <Content className="h-full p-3">
+            <ContentLayout>{children}</ContentLayout>
+          </Content>
         </Layout>
       </Layout>
     </ProvidersWrapper>
