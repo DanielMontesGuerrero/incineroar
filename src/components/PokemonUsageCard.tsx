@@ -44,22 +44,24 @@ const PropertyUsage = ({
     | keyof PokemonSet['evs'];
   usages: Usage<number | string>[];
 }) => {
-  const values = usages.map(({ value, percentage }, index) => {
-    return (
-      <Item key={index}>
-        <Row className="w-full">
-          <Col span={12}>
-            {property === 'teraTypes' ? (
-              <TypeBadge type={value as string} />
-            ) : (
-              value
-            )}
-          </Col>
-          <Col span={12}>{`${(percentage * 100).toFixed(2)}%`}</Col>
-        </Row>
-      </Item>
-    );
-  });
+  const values = usages
+    .sort((a, b) => b.percentage - a.percentage)
+    .map(({ value, percentage }, index) => {
+      return (
+        <Item key={index}>
+          <Row className="w-full">
+            <Col span={12}>
+              {property === 'teraTypes' ? (
+                <TypeBadge type={value as string} />
+              ) : (
+                value
+              )}
+            </Col>
+            <Col span={12}>{`${(percentage * 100).toFixed(2)}%`}</Col>
+          </Row>
+        </Item>
+      );
+    });
   return <List>{values}</List>;
 };
 

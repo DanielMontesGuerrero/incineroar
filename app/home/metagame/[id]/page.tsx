@@ -162,7 +162,7 @@ const CoreAnalytics = ({ analysis, coreSize }: CoreAnalyticsProps) => {
       key: 'usage',
       dataIndex: 'usage',
       render: (usage: number) =>
-        `${(usage / analysis.totalTeamsCount).toFixed(2)}%`,
+        `${((usage / analysis.totalTeamsCount) * 100).toFixed(2)}%`,
       sorter: (v1: TeamAnalytics, v2: TeamAnalytics) => v1.usage - v2.usage,
       defaultSortOrder: 'descend',
     },
