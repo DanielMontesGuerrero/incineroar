@@ -1,6 +1,9 @@
-import { ExposedUser, Team, Tournament } from './api';
+import { AnalyticsResponse, ExposedUser, Team, Tournament } from './api';
 
-// export interface GET_TOURNAMENT {}
+export interface GET_TOURNAMENT {
+  tournament: Tournament;
+  analysis?: AnalyticsResponse;
+}
 
 export interface DELETE_TOURNAMENT {
   success: true;

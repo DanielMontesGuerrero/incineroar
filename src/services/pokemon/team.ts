@@ -8,6 +8,6 @@ export default class TeamService {
 
   encodeTeam(team: Partial<PokemonSet>[]): string {
     const pokes = team.map((set) => Sets.exportSet(set));
-    return pokes.join('\n\n');
+    return pokes.join('').slice(0, -4);
   }
 }

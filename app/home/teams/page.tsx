@@ -5,12 +5,12 @@ import { Button, Col, Dropdown, Row, Table, TableProps } from 'antd';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
+import TeamPreview from '@/src/components/TeamPreview';
 import { useDeleteTeamMutation } from '@/src/hooks/team-queries';
 import useUserQuery from '@/src/hooks/useUserQuery';
 import { Team } from '@/src/types/api';
 
 import { EditTeamModal, ImportTeamModal } from './components/TeamModals';
-import TeamPreview from './components/TeamPreview';
 
 const TeamsTable = Table<Team>;
 

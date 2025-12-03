@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 import { MetagameKeys } from '../constants/query-keys';
-import { GET_TOURNAMENTS } from '../types/endpoints';
+import { GET_TOURNAMENT, GET_TOURNAMENTS } from '../types/endpoints';
 import { queryClient } from '../utils/query-clients';
 
 const getAllTournaments = async () => {
@@ -12,6 +12,19 @@ const getAllTournaments = async () => {
 
 const deleteTournament = async (id: string) => {
   return await axios.delete(`/api/tournament/${id}`);
+};
+
+const getTournament = async (id: string) => {
+  const result = await axios.get<GET_TOURNAMENT>(`/api/tournament/${id}`);
+  return result.data;
+};
+
+export const useTournamentQuery = (id: string) => {
+  return useQuery({
+    queryKey: MetagameKeys.tournament(id),
+    queryFn: () => getTournament(id),
+    staleTime: Infinity,
+  });
 };
 
 export const useDeleteTournamentMutation = (id: string) => {

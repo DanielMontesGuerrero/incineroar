@@ -186,13 +186,14 @@ export class CoreAnalysis {
 interface AnalysisContext {
   pokemon: Map<string, PokemonAnalysis>;
   cores: Map<number, CoreAnalysis>;
+  teams: TournamentTeam[];
 }
 
 export default class AnalyticsService {
   async getAnalytics(teams: TournamentTeam[]): Promise<AnalyticsResponse> {
     const pokemon = new Map<string, PokemonAnalysis>();
     const cores = new Map<number, CoreAnalysis>();
-    const context: AnalysisContext = { pokemon, cores };
+    const context: AnalysisContext = { pokemon, cores, teams };
     for (const { team } of teams) {
       await this.analyzeCores(team, [], 0, context);
     }
@@ -202,10 +203,12 @@ export default class AnalyticsService {
   protected contextToResponse({
     pokemon,
     cores,
+    teams,
   }: AnalysisContext): AnalyticsResponse {
     const response: AnalyticsResponse = {
       pokemon: [],
       cores: {},
+      totalTeamsCount: teams.length,
     };
     pokemon.forEach((analysis) => {
       response.pokemon.push(analysis.getAnalysisResult());
@@ -246,7 +249,6 @@ export default class AnalyticsService {
       return;
     }
     const allHaveSpecies = core.every((set) => {
-      if (set === undefined) console.log(core, set);
       return set.species !== undefined;
     });
     if (!allHaveSpecies) return;

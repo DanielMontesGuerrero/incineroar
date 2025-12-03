@@ -84,6 +84,7 @@ export interface TeamAnalytics {
 }
 
 export interface AnalyticsResponse {
+  totalTeamsCount: number;
   pokemon: PokemonAnalytics[];
   cores: Record<number, TeamAnalytics[]>;
 }
