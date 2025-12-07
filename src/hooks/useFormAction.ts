@@ -9,7 +9,7 @@ import {
 
 import { FormActionState } from '../types/form';
 
-type FormValue = string | Blob | string[] | number;
+type FormValue = string | Blob | string[] | number | undefined;
 type FormDataObject = { [key: string]: FormValue };
 
 export const getValidateStatus = <T>(
@@ -31,6 +31,7 @@ export const actionToOnFinishAdapter = <T extends FormDataObject>(
   const formData = new FormData();
   Object.keys(values).forEach((key) => {
     const value = values[key as keyof T];
+    if (value === undefined) return;
     if (Array.isArray(value)) {
       value.forEach((v) => formData.append(key, v));
       return;

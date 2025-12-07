@@ -5,6 +5,7 @@ import {
   DotChartOutlined,
   FileDoneOutlined,
   LogoutOutlined,
+  ReconciliationOutlined,
 } from '@ant-design/icons';
 import { QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -78,6 +79,12 @@ const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
       key: 'metagame',
       icon: <DotChartOutlined />,
       onClick: () => router.push('/home/metagame'),
+    },
+    {
+      label: 'Training',
+      key: 'training',
+      icon: <ReconciliationOutlined />,
+      onClick: () => router.push('/home/training'),
     },
     {
       label: 'Team judge',

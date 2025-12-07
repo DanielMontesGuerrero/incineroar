@@ -77,8 +77,6 @@ const AddTournamentModal = ({
     }
   }, [state.success, closeModal, form]);
 
-  console.log({ isOpen, state, form });
-
   return (
     <Modal
       title="Add tournament data"

@@ -1,4 +1,4 @@
-import { Tournament } from './api';
+import { CreateTrainingData, Tournament } from './api';
 
 export type FormActionState<T> =
   | {
@@ -21,4 +21,8 @@ export type AddTournamentFormData = Pick<
 > & {
   source: string;
   data: string;
+};
+
+export type AddTrainingFormData = Omit<CreateTrainingData, 'team'> & {
+  teamId?: string;
 };

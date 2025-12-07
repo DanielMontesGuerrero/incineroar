@@ -43,7 +43,6 @@ export const createTournament = async (
     source: formData.get('source') as string,
     data: formData.get('data') as string,
   };
-  console.log(rawData);
 
   const validatedFields = addTournamentFormDataSchema.safeParse(rawData);
 

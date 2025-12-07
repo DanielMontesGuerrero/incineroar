@@ -56,6 +56,13 @@ export const baseFormActionErrorHandler = <T>(
       error: 'User not found',
     };
   }
+  if (error instanceof MissingDBConnectionError) {
+    return {
+      success: false,
+      data,
+      error: 'DB not available',
+    };
+  }
   return {
     success: false,
     data: data,
