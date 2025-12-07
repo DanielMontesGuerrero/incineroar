@@ -20,6 +20,7 @@ export interface User {
   username: string;
   password: string;
   teams: Team[];
+  trainings: Training[];
   createdAt: string;
 }
 
@@ -29,7 +30,7 @@ export type SignInData = Pick<SignUpData, 'username' | 'password'>;
 
 export type UnsensitiveUserData = Pick<User, 'username' | 'id'>;
 
-export type ExposedUser = Omit<User, 'password'>;
+export type ExposedUser = Omit<User, 'password' | 'trainings'>;
 
 export interface ErrorResponse {
   message: string;
@@ -88,3 +89,55 @@ export interface AnalyticsResponse {
   pokemon: PokemonAnalytics[];
   cores: Record<number, TeamAnalytics[]>;
 }
+
+type ActionType = 'move' | 'switch' | 'ability' | 'effect';
+
+export interface Action {
+  id: string;
+  index: number;
+  type: ActionType;
+  name: string;
+  user: string;
+  targets: string[];
+}
+
+export interface Turn {
+  id: string;
+  index: number;
+  actions: Action[];
+}
+
+export interface Battle {
+  id: string;
+  name: string;
+  team?: Team;
+  season?: number;
+  format?: string;
+  notes: string;
+  turns: Turn[];
+  createdAt: string;
+}
+
+export type CreateActionData = Omit<Action, 'id'>;
+
+export type CreateTurnData = Omit<Turn, 'id' | 'actions'> & {
+  actions: CreateActionData[];
+};
+
+export type CreateBattleData = Omit<Battle, 'id' | 'createdAt' | 'turns'> & {
+  turns: CreateTurnData[];
+};
+
+export interface Training extends Pick<Battle, 'team' | 'season' | 'format'> {
+  id: string;
+  isDefault: boolean;
+  name: string;
+  description: string;
+  battles: Battle[];
+  createdAt: string;
+}
+
+export type CreateTrainingData = Omit<
+  Training,
+  'id' | 'isDefault' | 'battles' | 'createdAt'
+>;

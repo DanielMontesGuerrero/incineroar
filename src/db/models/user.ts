@@ -2,10 +2,14 @@ import { compare, hash } from 'bcrypt';
 import { Model, models, Schema } from 'mongoose';
 
 import {
+  Battle,
+  CreateBattleData,
   CreateTeamData,
+  CreateTrainingData,
   SignInData,
   SignUpData,
   Team,
+  Training,
   UnsensitiveUserData,
   User,
 } from '@/src/types/api';
@@ -13,6 +17,10 @@ import {
 import DBConnection from '../DBConnection';
 import { BaseRepository } from '../repository';
 import TeamRepository, { TeamModelName, TeamNotFoundError } from './team';
+import TrainingRepository, {
+  TrainingModelName,
+  TrainingNotFoundError,
+} from './training';
 
 const UserModelName = 'User';
 
@@ -21,6 +29,7 @@ const UserSchema = new Schema<User>(
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     teams: [{ type: Schema.Types.ObjectId, ref: TeamModelName }],
+    trainings: [{ type: Schema.Types.ObjectId, ref: TrainingModelName }],
   },
   {
     id: true,
@@ -34,12 +43,14 @@ export default class UserRepository implements BaseRepository<User> {
   static HASH_SALTS = 5;
   protected model: Model<User>;
   protected teamRepository: TeamRepository;
+  protected trainingRepository: TrainingRepository;
 
   constructor() {
     this.model =
       (models.User as Model<User>) ||
       DBConnection.getConnection().model(UserModelName, UserSchema);
     this.teamRepository = new TeamRepository();
+    this.trainingRepository = new TrainingRepository();
   }
 
   async getById(id: string) {
@@ -59,7 +70,18 @@ export default class UserRepository implements BaseRepository<User> {
       throw new UserAlreadyExistsError(user);
     }
     user.password = await hash(user.password, UserRepository.HASH_SALTS);
-    return (await this.model.create({ ...user, teams: [] })).toObject();
+    const defaultTraining: CreateTrainingData & { isDefault: boolean } = {
+      name: 'Default',
+      description: '',
+      isDefault: true,
+    };
+    const createdUser = await this.model.create({
+      ...user,
+      teams: [],
+      trainings: [],
+    });
+    await this.addNewTraining(createdUser.id as string, defaultTraining);
+    return this.getById(createdUser.id as string);
   }
 
   async exists({
@@ -91,24 +113,113 @@ export default class UserRepository implements BaseRepository<User> {
 
   async deleteTeam(id: string, teamId: string) {
     const user = await this.model.findById(id);
-    if (!user) throw new UserNotFoundError(id);
-    await this.model.updateOne(
-      { id },
-      {
-        $pull: { arrayFiledName: { propertyName: teamId } },
-      },
-    );
+    if (!user) return;
+    await user.populate('teams');
+    if (!user.teams.some((t) => t.id === teamId)) return;
+    await this.model.findByIdAndUpdate(id, {
+      $pull: { teams: teamId },
+    });
     await this.teamRepository.deleteById(teamId);
   }
 
   async getTeamById(userId: string, teamId: string): Promise<Team> {
-    const user = await this.model.findById(userId).populate('teams');
+    const user = await this.model.findById(userId);
     if (!user) throw new UserNotFoundError(userId);
+    await user.populate('teams');
     const team = user.teams.find((team) => team.id === teamId);
     if (!team) {
       throw new TeamNotFoundError(teamId);
     }
     return team;
+  }
+
+  async addNewTraining(
+    userId: string,
+    training: CreateTrainingData,
+  ): Promise<Training> {
+    const user = await this.model.findById(userId);
+    if (!user) throw new UserNotFoundError(userId);
+    const createdTraining = await this.trainingRepository.create(training);
+    user.trainings.push(createdTraining);
+    await user.save();
+    return createdTraining;
+  }
+
+  async deleteTraining(userId: string, trainingId: string) {
+    const user = await this.model.findById(userId);
+    if (!user) return;
+    await user.populate('trainings');
+    if (!user.trainings.some((t) => t.id === trainingId)) return;
+    await this.model.findByIdAndUpdate(userId, {
+      $pull: { trainings: trainingId },
+    });
+    return await this.trainingRepository.deleteById(trainingId);
+  }
+
+  async getTrainings(userId: string): Promise<Training[]> {
+    const user = await this.model.findById(userId);
+    if (!user) throw new UserNotFoundError(userId);
+    await user.populate('trainings');
+    return user.toObject().trainings;
+  }
+
+  async updateTraining(
+    userId: string,
+    trainingId: string,
+    data: Partial<Training>,
+  ) {
+    const user = await this.model.findById(userId);
+    if (!user) throw new UserNotFoundError(userId);
+    await user.populate('trainings');
+    if (!user.trainings.some((t) => t.id === trainingId)) {
+      throw new TrainingNotFoundError(trainingId);
+    }
+    return await this.trainingRepository.updateById(trainingId, data);
+  }
+
+  async addNewBattle(
+    userId: string,
+    trainingId: string,
+    battle: CreateBattleData,
+  ): Promise<Battle> {
+    const user = await this.model.findById(userId);
+    if (!user) throw new UserNotFoundError(userId);
+    await user.populate('trainings');
+    if (!user.trainings.some((t) => t.id === trainingId)) {
+      throw new TrainingNotFoundError(trainingId);
+    }
+    const createdBattle = await this.trainingRepository.addNewBattle(
+      trainingId,
+      battle,
+    );
+    return createdBattle;
+  }
+
+  async deleteBattle(userId: string, trainingId: string, battleId: string) {
+    const user = await this.model.findById(userId);
+    if (!user) return;
+    await user.populate('trainings');
+    if (!user.trainings.some((t) => t.id === trainingId)) return;
+    return await this.trainingRepository.deleteBattle(trainingId, battleId);
+  }
+
+  async updateBattle(
+    userId: string,
+    trainingId: string,
+    battleId: string,
+    data: Partial<Battle>,
+  ) {
+    const user = await this.model.findById(userId);
+    if (!user) throw new UserNotFoundError(userId);
+    await user.populate('trainings');
+    if (!user.trainings.some((t) => t.id === trainingId)) {
+      throw new TrainingNotFoundError(trainingId);
+    }
+    return await this.trainingRepository.updateBattle(
+      trainingId,
+      battleId,
+      data,
+    );
   }
 }
 

@@ -4,6 +4,7 @@ import { verifyUserAuth } from '@/src/actions/auth';
 import DBConnection from '@/src/db/DBConnection';
 import TeamRepository from '@/src/db/models/team';
 import TournamentRepository from '@/src/db/models/tournament';
+import TrainingRepository, { BattleRepository } from '@/src/db/models/training';
 import UserRepository from '@/src/db/models/user';
 import AnalyticsService from '@/src/services/pokemon/analytics';
 import TeamService from '@/src/services/pokemon/team';
@@ -12,7 +13,11 @@ import {
   CreateTournamentData,
   TournamentTeam,
 } from '@/src/types/api';
-import { sampleTeams } from '@/src/utils/test-utils';
+import {
+  createRandomBattle,
+  createRandomTraining,
+  sampleTeams,
+} from '@/src/utils/test-utils';
 
 export const testTeamsRepository = async () => {
   const sampleTeam = sampleTeams[0];
@@ -57,6 +62,7 @@ export const testTeamsRepository = async () => {
   console.log('Updated user', updatedUser);
   try {
     await teamRepo.getById(createdTeam.id);
+    console.error('Failed to delete');
   } catch (e) {
     console.log('Not found team', e);
   }
@@ -137,4 +143,80 @@ export const testAnalyzeTournament = async () => {
   const result = await service.getAnalytics(tournamentTeams);
   console.log('Done');
   console.log(result);
+};
+
+export const testCreateTraining = async () => {
+  await DBConnection.connect();
+  const userRepo = new UserRepository();
+  const trainingRepo = new TrainingRepository();
+
+  const { id: userId } = await verifyUserAuth();
+  const createTData = createRandomTraining();
+  const training = await userRepo.addNewTraining(userId, createTData);
+  const foundTraining = await trainingRepo.getById(training.id);
+  console.log('Created training', foundTraining);
+  const updatedTraining = await userRepo.updateTraining(userId, training.id, {
+    description: 'Updated description',
+    isDefault: true,
+  });
+  console.log('Updated training', updatedTraining);
+};
+
+export const testDeleteTraining = async (formData: FormData) => {
+  const id = formData.get('id') as string;
+  await DBConnection.connect();
+  const userRepo = new UserRepository();
+  const trainingRepo = new TrainingRepository();
+
+  const { id: userId } = await verifyUserAuth();
+  await userRepo.deleteTraining(userId, id);
+  try {
+    await trainingRepo.getById(id);
+    console.error('Failed to delete');
+  } catch (_err) {
+    console.log('Not found deleted training');
+  }
+  console.log('Deleted training');
+};
+
+export const testCreateBattle = async (formData: FormData) => {
+  const trainingId = formData.get('trainingId') as string;
+  await DBConnection.connect();
+  const userRepo = new UserRepository();
+  const battleRepo = new BattleRepository();
+
+  const { id: userId } = await verifyUserAuth();
+  const battleData = createRandomBattle();
+  const createdBattle = await userRepo.addNewBattle(
+    userId,
+    trainingId,
+    battleData,
+  );
+  const battle = await battleRepo.getById(createdBattle.id);
+  console.log('Created battle', battle);
+  const updatedBattle = await userRepo.updateBattle(
+    userId,
+    trainingId,
+    battle.id,
+    { notes: 'Updated notes' },
+  );
+  console.log('Updated battle', updatedBattle);
+};
+
+export const testDeleteBattle = async (formData: FormData) => {
+  const trainingId = formData.get('trainingId') as string;
+  const battleId = formData.get('battleId') as string;
+  await DBConnection.connect();
+  const userRepo = new UserRepository();
+  const battleRepo = new BattleRepository();
+
+  const { id: userId } = await verifyUserAuth();
+  await userRepo.deleteBattle(userId, trainingId, battleId);
+  try {
+    await battleRepo.getById(battleId);
+    console.error('Failed to delete battle');
+  } catch (_err) {
+    console.log('Not found deleted battle');
+  }
+  console.log('Deleted battle');
 };

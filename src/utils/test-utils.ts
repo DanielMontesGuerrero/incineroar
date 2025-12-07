@@ -1,3 +1,5 @@
+import { CreateBattleData, CreateTrainingData } from '../types/api';
+
 export const sampleTeams = [
   `Mimikyu @ Focus Sash  
 Ability: Disguise  
@@ -671,3 +673,52 @@ export const pokedataSampleTournament = [
     },
   },
 ];
+
+export const createRandomTraining = (): CreateTrainingData => {
+  const training: CreateTrainingData = {
+    name: `Training ${new Date().toISOString()}`,
+    description: '',
+  };
+  return training;
+};
+
+export const createRandomBattle = (): CreateBattleData => {
+  const battle: CreateBattleData = {
+    name: `Battle ${new Date().toISOString()}`,
+    notes: '',
+    turns: [
+      {
+        index: 1,
+        actions: [
+          {
+            index: 1,
+            type: 'move',
+            user: 'incineroar',
+            targets: ['pikachu'],
+            name: 'fake out',
+          },
+        ],
+      },
+      {
+        index: 2,
+        actions: [
+          {
+            index: 1,
+            type: 'move',
+            user: 'incineroar',
+            targets: ['pikachu'],
+            name: 'fake out',
+          },
+          {
+            index: 2,
+            type: 'move',
+            user: 'incineroar',
+            targets: ['pikachu'],
+            name: 'fake out',
+          },
+        ],
+      },
+    ],
+  };
+  return battle;
+};
