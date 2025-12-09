@@ -35,6 +35,10 @@ export interface GET_TRAININGS {
   trainings: Training[];
 }
 
+export interface GET_TRAINING {
+  training: Training;
+}
+
 export interface DELETE_TRAINING {
   success: true;
 }

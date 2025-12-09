@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 import { TrainingKeys } from '../constants/query-keys';
-import { GET_TRAININGS } from '../types/endpoints';
+import { GET_TRAINING, GET_TRAININGS } from '../types/endpoints';
 import { queryClient } from '../utils/query-clients';
 
 const getAllTrainings = async () => {
@@ -12,6 +12,19 @@ const getAllTrainings = async () => {
 
 const deleteTraining = async (id: string) => {
   return await axios.delete(`/api/user/training/${id}`);
+};
+
+const getTraining = async (id: string) => {
+  const result = await axios.get<GET_TRAINING>(`/api/user/training/${id}`);
+  return result.data;
+};
+
+export const useTrainingQuery = (id: string) => {
+  return useQuery({
+    queryKey: TrainingKeys.training(id),
+    queryFn: () => getTraining(id),
+    staleTime: Infinity,
+  });
 };
 
 export const useDeleteTrainingMutation = (id: string) => {
