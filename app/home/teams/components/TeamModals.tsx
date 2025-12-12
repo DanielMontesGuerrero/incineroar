@@ -2,7 +2,6 @@ import { PlusCircleOutlined } from '@ant-design/icons';
 import { Alert, Button, Form, FormInstance, Input, Modal, Select } from 'antd';
 import FormItem from 'antd/es/form/FormItem';
 import TextArea from 'antd/es/input/TextArea';
-import Compact from 'antd/es/space/Compact';
 import { useEffect, useMemo, useState } from 'react';
 
 import { UserKeys } from '@/src/constants/query-keys';
@@ -11,6 +10,7 @@ import { CreateTeamData, Team, UpdateTeamData } from '@/src/types/api';
 import { FormActionState } from '@/src/types/form';
 import { queryClient } from '@/src/utils/query-clients';
 
+import FormatInput from '../../components/FormatInput';
 import { createTeam, CreateTeamActionState, updateTeam } from '../actions';
 
 const TeamFormItem = FormItem<CreateTeamData>;
@@ -40,12 +40,6 @@ const TeamForm = <T extends CreateTeamData | UpdateTeamData>(
   props: TeamFormProps<T>,
 ) => {
   const CreateOrUpdateForm = Form<T>;
-  const yearValues = Array.from(
-    { length: new Date().getFullYear() - 2008 + 2 },
-    (_, i) => 2008 + i,
-  )
-    .map((year) => ({ value: year.toString() }))
-    .reverse();
   const { state, isPending, initialValues } = props;
   const onFinish = (data: T) => {
     const newData = data;
@@ -78,12 +72,7 @@ const TeamForm = <T extends CreateTeamData | UpdateTeamData>(
           rules={[{ required: true, message: 'Please enter the format' }]}
           validateStatus={getValidateStatus(state, 'format', isPending)}
         >
-          <Compact block>
-            <TeamFormItem name="season" noStyle>
-              <Select options={yearValues} />
-            </TeamFormItem>
-            <Input />
-          </Compact>
+          <FormatInput />
         </TeamFormItem>
         <TeamFormItem
           name="tags"
@@ -102,7 +91,7 @@ const TeamForm = <T extends CreateTeamData | UpdateTeamData>(
         </TeamFormItem>
       </>
     ),
-    [state, isPending, yearValues],
+    [state, isPending],
   );
 
   return (

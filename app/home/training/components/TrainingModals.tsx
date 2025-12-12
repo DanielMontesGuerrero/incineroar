@@ -4,7 +4,6 @@ import { PlusCircleOutlined } from '@ant-design/icons';
 import { Alert, Button, Form, Input, Modal, Select, SelectProps } from 'antd';
 import FormItem from 'antd/es/form/FormItem';
 import TextArea from 'antd/es/input/TextArea';
-import Compact from 'antd/es/space/Compact';
 import { useEffect, useState } from 'react';
 
 import { TrainingKeys } from '@/src/constants/query-keys';
@@ -14,6 +13,7 @@ import { Team, Training } from '@/src/types/api';
 import { AddTrainingFormData, EditTrainingFormData } from '@/src/types/form';
 import { queryClient } from '@/src/utils/query-clients';
 
+import FormatInput from '../../components/FormatInput';
 import {
   AddTrainingActionState,
   createTraining,
@@ -63,12 +63,6 @@ const AddOrEditTrainingModal = (props: AddOrEditTrainingModalProps) => {
     initialState,
     (isEdit ? editTraining : createTraining) as AddOrEditTrainingAction,
   );
-  const yearValues = Array.from(
-    { length: new Date().getFullYear() - 2008 + 2 },
-    (_, i) => 2008 + i,
-  )
-    .map((year) => ({ value: year.toString() }))
-    .reverse();
   const teamsItems: SelectProps['options'] = teams.map(({ name, id }) => ({
     label: name,
     value: id,
@@ -139,12 +133,7 @@ const AddOrEditTrainingModal = (props: AddOrEditTrainingModalProps) => {
           label="Format"
           validateStatus={getValidateStatus(state, 'format', isPending)}
         >
-          <Compact block>
-            <TrainingFormItem name="season" noStyle>
-              <Select options={[{ value: undefined }, ...yearValues]} />
-            </TrainingFormItem>
-            <Input />
-          </Compact>
+          <FormatInput additionalYearOptions={[{ value: null }]} />
         </TrainingFormItem>
         <TrainingFormItem name="teamId" label="Team">
           <Select options={teamsItems} />

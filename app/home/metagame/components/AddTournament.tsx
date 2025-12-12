@@ -5,7 +5,6 @@ import { Alert, Button, Form, Input, Modal, Select } from 'antd';
 import { Rule } from 'antd/es/form';
 import FormItem from 'antd/es/form/FormItem';
 import TextArea from 'antd/es/input/TextArea';
-import Compact from 'antd/es/space/Compact';
 import { useEffect, useState } from 'react';
 
 import { MetagameKeys } from '@/src/constants/query-keys';
@@ -13,6 +12,7 @@ import useFormAction, { getValidateStatus } from '@/src/hooks/useFormAction';
 import { AddTournamentFormData } from '@/src/types/form';
 import { queryClient } from '@/src/utils/query-clients';
 
+import FormatInput from '../../components/FormatInput';
 import { createTournament, CreateTournamentActionState } from '../actions';
 
 const TournamentForm = Form<AddTournamentFormData>;
@@ -40,12 +40,6 @@ const AddTournamentModal = ({
 }: AddTournamentModalProps) => {
   const { state, form, onFinish, isPending } =
     useFormAction<AddTournamentFormData>(INITIAL_STATE, createTournament);
-  const yearValues = Array.from(
-    { length: new Date().getFullYear() - 2008 + 2 },
-    (_, i) => 2008 + i,
-  )
-    .map((year) => ({ value: year.toString() }))
-    .reverse();
   const sources = [{ value: 'pokedata' }];
   const intertecptOnFinish = (fields: AddTournamentFormData) => {
     const { data, ...otherData } = fields;
@@ -117,12 +111,7 @@ const AddTournamentModal = ({
           rules={[{ required: true, message: 'Please enter the format' }]}
           validateStatus={getValidateStatus(state, 'format', isPending)}
         >
-          <Compact block>
-            <TournamentFormItem name="season" noStyle>
-              <Select options={yearValues} />
-            </TournamentFormItem>
-            <Input />
-          </Compact>
+          <FormatInput />
         </TournamentFormItem>
         <TournamentFormItem name="source" label="Source">
           <Select options={sources} />
