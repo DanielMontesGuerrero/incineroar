@@ -1,4 +1,4 @@
-import { CreateTrainingData, Tournament } from './api';
+import { Battle, CreateTrainingData, Tournament } from './api';
 
 export type FormActionState<T> =
   | {
@@ -28,3 +28,8 @@ export type AddTrainingFormData = Omit<CreateTrainingData, 'team'> & {
 };
 
 export type EditTrainingFormData = AddTrainingFormData & { id: string };
+
+export type EditBattleFormData = Omit<Battle, 'team' | 'createdAt'> & {
+  teamId?: string;
+  trainingId: string;
+};

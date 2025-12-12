@@ -93,7 +93,6 @@ export interface AnalyticsResponse {
 type ActionType = 'move' | 'switch' | 'ability' | 'effect';
 
 export interface Action {
-  id: string;
   index: number;
   type: ActionType;
   name: string;
@@ -102,7 +101,6 @@ export interface Action {
 }
 
 export interface Turn {
-  id: string;
   index: number;
   actions: Action[];
 }

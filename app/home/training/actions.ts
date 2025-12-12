@@ -1,15 +1,21 @@
 'use server';
 
+import { decode } from '@razr/formdata';
 import z from 'zod';
 
 import { verifyUserAuth } from '@/src/actions/auth';
 import { baseFormActionErrorHandler } from '@/src/actions/error-handlers';
 import DBConnection from '@/src/db/DBConnection';
 import { TeamNotFoundError } from '@/src/db/models/team';
+import {
+  BattleNotFoundError,
+  TrainingNotFoundError,
+} from '@/src/db/models/training';
 import UserRepository from '@/src/db/models/user';
-import { Team } from '@/src/types/api';
+import { Action, Team } from '@/src/types/api';
 import {
   AddTrainingFormData,
+  EditBattleFormData,
   EditTrainingFormData,
   FormActionState,
 } from '@/src/types/form';
@@ -155,6 +161,136 @@ export const editTraining = async (
       };
     }
     return baseFormActionErrorHandler<EditTrainingFormData>(
+      error,
+      validatedFields.data,
+      'Unexpected error',
+    );
+  }
+
+  return { success: true };
+};
+
+export type EditBattleFormActionState = FormActionState<EditBattleFormData>;
+
+const actionTypes: Action['type'][] = ['move', 'switch', 'ability', 'effect'];
+
+const actionFormDataSchema = z.object({
+  index: z.number(),
+  type: z.union(
+    actionTypes.map((val) => z.literal(val)),
+    'Invalid action type',
+  ),
+  name: z.string(),
+  user: z.string(),
+  targets: z
+    .array(z.string().max(50, 'At most 100 characters'))
+    .max(10, 'At most 10 targets'),
+});
+
+const turnFormDataSchema = z.object({
+  index: z.number(),
+  actions: z.array(actionFormDataSchema),
+});
+
+const battleFormDataSchema = z.object({
+  id: z.string().min(1, 'Invalid id').max(50, 'Invalid id'),
+  trainingId: z.string().min(1, 'Invalid id').max(50, 'Invalid id'),
+  name: z
+    .string()
+    .min(1, 'At least one character')
+    .max(100, 'At most 100 characters'),
+  teamId: z.string().min(1, 'Invalid id').max(50, 'Invalid id').optional(),
+  season: z
+    .number()
+    .min(2008)
+    .max(new Date().getFullYear() + 1)
+    .optional(),
+  format: z
+    .string()
+    .min(1, 'Format must be at least 1 characters')
+    .max(50, 'Format must be at most 50 characters')
+    .optional(),
+  notes: z.string().max(1000, 'At most 1000 characters'),
+  turns: z.array(turnFormDataSchema),
+});
+
+export const editBattle = async (
+  _state: EditBattleFormActionState,
+  formData: FormData,
+): Promise<EditBattleFormActionState> => {
+  const rawData = decode(formData) as unknown as EditBattleFormData;
+  rawData.season = rawData?.season ? Number(rawData.season) : undefined;
+  rawData?.turns.forEach((turn) => {
+    if (!turn) return;
+    turn.index = Number(turn.index);
+    turn.actions?.forEach((action) => {
+      if (!action) return;
+      action.index = Number(action.index);
+      if (!action.targets) {
+        action.targets = [];
+      }
+    });
+  });
+  const validatedFields = battleFormDataSchema.safeParse(rawData);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      data: rawData,
+      errors: z.treeifyError(validatedFields.error).properties,
+    };
+  }
+
+  try {
+    await DBConnection.connect();
+
+    const userRepo = new UserRepository();
+    const { id: userId } = await verifyUserAuth();
+    const {
+      id: battleId,
+      trainingId,
+      teamId,
+      ...updateData
+    } = validatedFields.data;
+    let team: Team | undefined = undefined;
+    if (teamId) {
+      team = await userRepo.getTeamById(userId, teamId);
+    }
+
+    const updatedBattle = await userRepo.updateBattle(
+      userId,
+      trainingId,
+      battleId,
+      {
+        team,
+        ...updateData,
+      },
+    );
+    console.log('Updated battle', updatedBattle);
+  } catch (error) {
+    console.error('Faild to update battle', error);
+    if (error instanceof TeamNotFoundError) {
+      return {
+        success: false,
+        data: validatedFields.data,
+        error: 'Team not found',
+      };
+    }
+    if (error instanceof TrainingNotFoundError) {
+      return {
+        success: false,
+        data: validatedFields.data,
+        error: 'Training not found',
+      };
+    }
+    if (error instanceof BattleNotFoundError) {
+      return {
+        success: false,
+        data: validatedFields.data,
+        error: 'Battle not found',
+      };
+    }
+    return baseFormActionErrorHandler<EditBattleFormData>(
       error,
       validatedFields.data,
       'Unexpected error',

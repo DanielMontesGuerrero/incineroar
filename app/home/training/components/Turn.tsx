@@ -11,8 +11,8 @@ interface TurnProps {
 const Turn = ({ turn }: TurnProps) => {
   return (
     <Card title={`Turn ${turn.index}`}>
-      {turn.actions.map((action) => (
-        <Action key={action.id} action={action} />
+      {turn.actions.map((action, index) => (
+        <Action key={index} action={action} />
       ))}
     </Card>
   );

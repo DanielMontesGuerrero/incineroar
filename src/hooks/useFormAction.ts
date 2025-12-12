@@ -1,3 +1,4 @@
+import { encode } from '@razr/formdata';
 import { FormItemProps } from 'antd';
 import { useForm } from 'antd/es/form/Form';
 import {
@@ -9,8 +10,7 @@ import {
 
 import { FormActionState } from '../types/form';
 
-type FormValue = string | Blob | string[] | number | undefined;
-type FormDataObject = { [key: string]: FormValue };
+type FormDataObject = { [key: string]: unknown };
 
 export const getValidateStatus = <T>(
   state: FormActionState<T>,
@@ -28,20 +28,7 @@ export const actionToOnFinishAdapter = <T extends FormDataObject>(
   formAction: (payload: FormData) => void,
   startTransition: TransitionStartFunction,
 ) => {
-  const formData = new FormData();
-  Object.keys(values).forEach((key) => {
-    const value = values[key as keyof T];
-    if (value === undefined) return;
-    if (Array.isArray(value)) {
-      value.forEach((v) => formData.append(key, v));
-      return;
-    }
-    if (typeof value === 'number') {
-      formData.append(key, value.toString());
-      return;
-    }
-    formData.append(key, value);
-  });
+  const formData = encode(values);
   startTransition(() => {
     formAction(formData);
   });
