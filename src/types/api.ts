@@ -91,6 +91,7 @@ export interface AnalyticsResponse {
 }
 
 type ActionType = 'move' | 'switch' | 'ability' | 'effect';
+type BattleResult = 'win' | 'loose' | 'tie';
 
 export interface Action {
   index: number;
@@ -108,6 +109,7 @@ export interface Turn {
 export interface Battle {
   id: string;
   name: string;
+  result?: BattleResult;
   team?: Team;
   season?: number;
   format?: string;

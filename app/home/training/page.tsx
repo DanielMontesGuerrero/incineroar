@@ -32,6 +32,14 @@ const Page = () => {
       ...t,
     }));
   }, [data, defaultTraining]);
+  const fallbackDefaultTraining: Training = {
+    id: '0',
+    name: '',
+    isDefault: true,
+    createdAt: '',
+    battles: [],
+    description: '',
+  };
 
   if (isError) {
     return <h1>Error</h1>;
@@ -61,7 +69,7 @@ const Page = () => {
             isLoading={isLoading}
             trainingsAndBattles={trainingsAndBattles}
             onEditTraining={setSelectedTraining}
-            training={defaultTraining}
+            training={defaultTraining ?? fallbackDefaultTraining}
           />
         </Col>
       </Row>

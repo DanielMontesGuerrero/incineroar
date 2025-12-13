@@ -191,6 +191,20 @@ const EditBattle = ({
       },
     ],
   };
+  const resultOptions = [
+    {
+      value: null,
+    },
+    {
+      value: 'win',
+    },
+    {
+      value: 'loose',
+    },
+    {
+      value: 'tie',
+    },
+  ];
   const interceptOnFinish = (data: EditBattleFormData) => {
     data.trainingId = trainingId;
     data.id = battle.id;
@@ -237,6 +251,12 @@ const EditBattle = ({
         validateStatus={getValidateStatus(state, 'name', isPending)}
       >
         <Input />
+      </BattleFormItem>
+      <BattleFormItem
+        name="result"
+        validateStatus={getValidateStatus(state, 'result', isPending)}
+      >
+        <Select options={resultOptions} />
       </BattleFormItem>
       <Flex justify="space-between">
         <BattleFormItem

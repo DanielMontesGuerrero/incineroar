@@ -52,6 +52,12 @@ const TurnSchema = new Schema<Turn>(
   },
 );
 
+const BattleResultEnumList: Exclude<Battle['result'], undefined>[] = [
+  'win',
+  'loose',
+  'tie',
+];
+
 const BaseBattleFields = {
   team: { ref: TeamModelName, type: Schema.Types.ObjectId },
   season: { type: Number },
@@ -63,6 +69,11 @@ export const BattleSchema = new Schema<Battle>(
     name: { type: String, required: true },
     notes: { type: String },
     turns: [{ type: TurnSchema, required: true }],
+    result: {
+      type: String,
+      requried: true,
+      enum: BattleResultEnumList,
+    },
     ...BaseBattleFields,
   },
   {

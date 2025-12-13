@@ -61,6 +61,7 @@ const Page = ({
         <Title level={2}>{battle.name}</Title>
         <Button icon={<EditOutlined />} onClick={() => setIsEdit(true)} />
       </Flex>
+      {battle.result && <Text>{`Result: ${battle.result}`}</Text>}
       <Flex className="mb-3" justify="space-between">
         {battle.season && battle.format && (
           <Text>{`${battle.season} - ${battle.format}`}</Text>

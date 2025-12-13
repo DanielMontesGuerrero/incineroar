@@ -12,7 +12,7 @@ import {
   TrainingNotFoundError,
 } from '@/src/db/models/training';
 import UserRepository from '@/src/db/models/user';
-import { Action, Team } from '@/src/types/api';
+import { Action, Battle, Team } from '@/src/types/api';
 import {
   AddTrainingFormData,
   EditBattleFormData,
@@ -192,6 +192,12 @@ const turnFormDataSchema = z.object({
   actions: z.array(actionFormDataSchema),
 });
 
+const battleResults: Exclude<Battle['result'], undefined>[] = [
+  'win',
+  'loose',
+  'tie',
+];
+
 const battleFormDataSchema = z.object({
   id: z.string().min(1, 'Invalid id').max(50, 'Invalid id'),
   trainingId: z.string().min(1, 'Invalid id').max(50, 'Invalid id'),
@@ -199,6 +205,12 @@ const battleFormDataSchema = z.object({
     .string()
     .min(1, 'At least one character')
     .max(100, 'At most 100 characters'),
+  result: z
+    .union(
+      battleResults.map((val) => z.literal(val)),
+      'Invalid result',
+    )
+    .optional(),
   teamId: z.string().min(1, 'Invalid id').max(50, 'Invalid id').optional(),
   season: z
     .number()

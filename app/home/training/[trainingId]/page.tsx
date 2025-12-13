@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Col, Row } from 'antd';
+import { Alert, Col, Row, Skeleton } from 'antd';
 import { use, useState } from 'react';
 
 import { useTrainingQuery } from '@/src/hooks/training-queries';
@@ -13,8 +13,12 @@ const Page = ({ params }: { params: Promise<{ trainingId: string }> }) => {
   const { isLoading, isError, data } = useTrainingQuery(trainingId);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (isError) {
+  if (isError || !data) {
     return <h1>Error</h1>;
+  }
+
+  if (isLoading) {
+    return <Skeleton active />;
   }
 
   return (
@@ -31,9 +35,9 @@ const Page = ({ params }: { params: Promise<{ trainingId: string }> }) => {
         <Col span={24}>
           <TrainingsOrBattlesTable
             isLoading={isLoading}
-            trainingsAndBattles={data?.training.battles ?? []}
+            trainingsAndBattles={data.training.battles}
             onEditTraining={() => {}}
-            training={data?.training}
+            training={data.training}
           />
         </Col>
       </Row>
