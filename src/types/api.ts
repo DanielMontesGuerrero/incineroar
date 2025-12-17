@@ -90,15 +90,19 @@ export interface AnalyticsResponse {
   cores: Record<number, TeamAnalytics[]>;
 }
 
-type ActionType = 'move' | 'switch' | 'ability' | 'effect';
+type ActionType = 'move' | 'switch' | 'effect' | 'ability';
 type BattleResult = 'win' | 'loose' | 'tie';
+type Player = 'p1' | 'p2';
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+type ActionActor = `${Player}:${string}` | string;
 
 export interface Action {
   index: number;
+  player?: Player;
   type: ActionType;
   name: string;
-  user: string;
-  targets: string[];
+  user: ActionActor;
+  targets: ActionActor[];
 }
 
 export interface Turn {
