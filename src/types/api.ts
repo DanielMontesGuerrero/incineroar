@@ -92,7 +92,7 @@ export interface AnalyticsResponse {
 
 type ActionType = 'move' | 'switch' | 'effect' | 'ability';
 type BattleResult = 'win' | 'loose' | 'tie';
-type Player = 'p1' | 'p2';
+type Player = 'p1' | 'p2' | 'p3' | 'p4';
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 type ActionActor = `${Player}:${string}` | string;
 

@@ -1,3 +1,14 @@
+import {
+  AbilityName,
+  Args,
+  BattleArgName,
+  EffectName,
+  KWArgs,
+  MoveName,
+  PokemonIdent,
+  Protocol,
+} from '@pkmn/protocol';
+
 import { Action, Battle, CreateBattleData, Turn } from '@/src/types/api';
 
 interface ActionWithContext extends Action {
@@ -18,11 +29,13 @@ interface SSPPContext {
   currTurnIndex: number;
   turns: Turn[];
   currActions: ActionWithContext[];
-  usernameToPlayerMap: { [key: string]: 'p1' | 'p2' | undefined };
+  usernameToPlayerMap: { [key: string]: 'p1' | 'p2' | 'p3' | 'p4' | undefined };
   result?: Battle['result'];
   nicknameToPokemonMap: {
     p1: { [nickname: string]: string | undefined };
     p2: { [nickname: string]: string | undefined };
+    p3: { [nickname: string]: string | undefined };
+    p4: { [nickname: string]: string | undefined };
   };
 }
 
@@ -31,13 +44,7 @@ type CommandHandler = (
   ctx: SSPPContext,
 ) => void;
 
-interface ParsedPokemon {
-  player: string;
-  pokemon: string;
-  taggedPokemon: string;
-}
-
-interface RestData {
+interface FromData {
   from?: {
     type?: string;
     name?: string;
@@ -45,249 +52,26 @@ interface RestData {
     fromName?: string;
   };
   inferredActionType: Action['type'];
-  of?: ParsedPokemon;
-  upkeep?: boolean;
 }
+
+type FromArg = AbilityName | MoveName | EffectName;
 
 export class ShowdownSimProtocolParser implements BattleParser<string[]> {
   parserType = 'showdown-sim-protocol' as const;
 
-  handlerUtils = {
-    pushTurn: (ctx: SSPPContext) => {
-      ctx.turns.push({
-        index: ctx.currTurnIndex,
-        actions: ctx.currActions,
-      });
-      ctx.currActions = [];
-    },
-    pushAction: (
-      action: Omit<ActionWithContext, 'index'>,
-      ctx: SSPPContext,
-    ) => {
-      const index = ctx.currActions.length;
-      ctx.currActions.push({
-        index,
-        ...action,
-      });
-    },
-    findLastMoveAction: (ctx: SSPPContext) => {
-      for (let index = 0; index < ctx.currActions.length; index++) {
-        if (ctx.currActions.at(-(index + 1))?.type === 'move') {
-          return ctx.currActions.at(-(index + 1));
-        }
-      }
-      return undefined;
-    },
-    parsePokemon: (rawPokemon: string | undefined, ctx: SSPPContext) => {
-      if (!rawPokemon) {
-        throw new CommandHandlerError(
-          'pokemon is undefined',
-          [rawPokemon],
-          ctx,
-        );
-      }
-      const [rawPosition, rawName] = rawPokemon.split(':');
-      const player = rawPosition.slice(0, 2) as 'p1' | 'p2';
-      const nameOrNickname = rawName.trim();
-      const pokemon =
-        ctx.nicknameToPokemonMap[player][nameOrNickname] ?? nameOrNickname;
-      return { player, pokemon, taggedPokemon: `${player}:${pokemon}` };
-    },
-    parsePokemonDetails: (details: string) => {
-      const [rawSpecies, ...___] = details.split(',');
-      const species = rawSpecies.trim();
-      return { species };
-    },
-    parseRest: (
-      lineData: (string | undefined)[] | undefined,
-      ctx: SSPPContext,
-    ): RestData => {
-      const result: RestData = {
-        inferredActionType: 'effect',
-        from: undefined,
-        of: undefined,
-        upkeep: undefined,
-      };
-      if (!lineData) {
-        return result;
-      }
-      lineData.forEach((line) => {
-        if (!line) return;
-        if (line.startsWith('[from]')) {
-          const [type, rawName] = line.replace('[from]', '').trim().split(':');
-          const name = rawName.trim();
-          result.from = {
-            type: name ? type : undefined,
-            name: name ? name : undefined,
-            raw: type,
-          };
-          result.inferredActionType = this.handlerUtils.getTypeFrom(result);
-          result.from.fromName =
-            result.inferredActionType === 'ability'
-              ? result.from.name
-              : result.from.raw;
-        }
-        if (line.startsWith('[of]')) {
-          const rawPokemon = line.replace('[of]', '').trim();
-          try {
-            result.of = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-          } catch (_) {}
-        }
-        if (line.startsWith('[upkeep]')) {
-          result.upkeep = true;
-        }
-      });
-      return result;
-    },
-    registerPokemon: (lineData: (string | undefined)[], ctx: SSPPContext) => {
-      const [_, rawPokemon, details, ...__] = lineData;
-      if (!rawPokemon || !details) {
-        throw new CommandHandlerError(
-          'pokemon or details is undefined',
-          lineData,
-          ctx,
-        );
-      }
-      const [rawPosition, rawName] = rawPokemon.split(':');
-      const trainer = rawPosition.slice(0, 2) as 'p1' | 'p2';
-      const nameOrNickname = rawName.trim();
-      const { species } = this.handlerUtils.parsePokemonDetails(details);
-      ctx.nicknameToPokemonMap[trainer][nameOrNickname] = species;
-    },
-    registerFormChange: (
-      reason: string,
-      lineData: (string | undefined)[],
-      ctx: SSPPContext,
-      options: { shouldIncludePlayer?: boolean } = {},
-    ) => {
-      const [_, rawPokemon, rawDetails, ...__] = lineData;
-      if (!rawPokemon) {
-        throw new CommandHandlerError('pokemon is undefined', lineData, ctx);
-      }
-      let species = 'unknown';
-      if (rawDetails) {
-        const { species: newSpecies } =
-          this.handlerUtils.parsePokemonDetails(rawDetails);
-        species = newSpecies;
-      }
-      const { player, taggedPokemon, pokemon } = this.handlerUtils.parsePokemon(
-        rawPokemon,
-        ctx,
-      );
-      this.handlerUtils.pushAction(
-        {
-          player: options.shouldIncludePlayer ? player : undefined,
-          type: 'effect',
-          name: reason,
-          targets: [species],
-          user: options.shouldIncludePlayer ? pokemon : taggedPokemon,
-        },
-        ctx,
-      );
-      this.handlerUtils.registerPokemon(lineData, ctx);
-    },
-    boostChange: (
-      label: string,
-      lineData: (string | undefined)[],
-      ctx: SSPPContext,
-    ) => {
-      const [_, rawPokemon, stat, amount, ...rest] = lineData;
-      if (!rawPokemon) {
-        throw new CommandHandlerError('pokemon is undefined', lineData, ctx);
-      }
-      const fromAndOf = this.handlerUtils.parseRest(rest, ctx);
-      const fromName = fromAndOf.from?.fromName;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
-        {
-          type: fromAndOf.inferredActionType,
-          name: fromName
-            ? `${fromName} caused ${stat} ${label} ${amount} to`
-            : `${stat} ${label} ${amount}`,
-          targets: fromName ? [taggedPokemon] : [],
-          user: fromName ? (fromAndOf.of?.taggedPokemon ?? '') : taggedPokemon,
-        },
-        ctx,
-      );
-    },
-    volatileEffect: (
-      label: string,
-      lineData: (string | undefined)[],
-      ctx: SSPPContext,
-    ) => {
-      const [_, rawPokemon, effect, ...rest] = lineData;
-      if (!rawPokemon) {
-        throw new CommandHandlerError('pokemon is undefined', lineData, ctx);
-      }
-      const restData = this.handlerUtils.parseRest(rest, ctx);
-      const fromName = restData.from?.fromName;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
-        {
-          type: restData.inferredActionType,
-          name:
-            (fromName ? `${fromName} caused ` : '') + `${effect} ${label} on`,
-          targets: [taggedPokemon],
-          user: restData.of?.taggedPokemon ?? '',
-        },
-        ctx,
-      );
-    },
-    field: (
-      label: string,
-      lineData: (string | undefined)[],
-      ctx: SSPPContext,
-    ) => {
-      const [_, condition, ...rest] = lineData;
-      const restData = this.handlerUtils.parseRest(rest, ctx);
-      const fromName = restData.from?.fromName;
-      this.handlerUtils.pushAction(
-        {
-          type: restData.inferredActionType,
-          name:
-            (restData ? `${fromName} caused ` : '') + `${condition} ${label}`,
-          user: restData.of?.taggedPokemon ?? '',
-          targets: [],
-        },
-        ctx,
-      );
-    },
-    side: (
-      label: string,
-      lineData: (string | undefined)[],
-      ctx: SSPPContext,
-    ) => {
-      const [_, side, condition, ...rest] = lineData;
-      const restData = this.handlerUtils.parseRest(rest, ctx);
-      const fromName = restData.from?.fromName;
-      this.handlerUtils.pushAction(
-        {
-          type: restData.inferredActionType,
-          name:
-            (fromName ? `${fromName} caused ` : '') +
-            `${condition} ${label} for ${side}`,
-          user: restData.of?.taggedPokemon ?? '',
-          targets: [],
-        },
-        ctx,
-      );
-    },
-    getTypeFrom: (data: RestData): Action['type'] => {
-      return data.from?.type === 'ability' ? 'ability' : 'effect';
-    },
-  };
-
   commandHandlers: Record<string, CommandHandler> = {
     turn: (lineData, ctx) => {
-      const [_, rawTurnIndex] = lineData;
+      const { args } = this.parseLineData<'|turn|'>(lineData);
+      const [_, rawTurnIndex] = args;
       const turnIndex = Number(rawTurnIndex);
       if (turnIndex > 1) {
-        this.handlerUtils.pushTurn(ctx);
+        this.pushTurn(ctx);
       }
       ctx.currTurnIndex = turnIndex;
     },
     win: (lineData, ctx) => {
-      const [_, winner] = lineData;
+      const { args } = this.parseLineData<'|win|'>(lineData);
+      const [_, winner] = args;
       if (!winner) {
         throw new CommandHandlerError('Winner is undefined', lineData, ctx);
       }
@@ -297,10 +81,11 @@ export class ShowdownSimProtocolParser implements BattleParser<string[]> {
       } else if (winnerPlayer === 'p2') {
         ctx.result = 'loose';
       }
-      this.handlerUtils.pushTurn(ctx);
+      this.pushTurn(ctx);
     },
     player: (lineData, ctx) => {
-      const [_, player, username, ...__] = lineData;
+      const { args } = this.parseLineData<'|player|'>(lineData);
+      const [_, player, username] = args;
       if (!username) {
         throw new CommandHandlerError('Username is undefined', lineData, ctx);
       }
@@ -310,25 +95,23 @@ export class ShowdownSimProtocolParser implements BattleParser<string[]> {
       ctx.result = 'tie';
     },
     move: (lineData, ctx) => {
-      const [_, rawPokemon, move, rawTarget] = lineData;
-      const { player, pokemon } = this.handlerUtils.parsePokemon(
-        rawPokemon,
-        ctx,
-      );
+      const { args } = this.parseLineData<'|move|'>(lineData);
+      const [_, rawPokemon, move, rawTarget] = args;
+      const { player, pokemon } = this.parsePokemon(rawPokemon, ctx);
       let target: string | undefined = undefined;
-      if (rawTarget) {
-        const { taggedPokemon: parsedTarget } = this.handlerUtils.parsePokemon(
+      if (rawTarget && rawTarget !== 'null') {
+        const { taggedPokemon: parsedTarget } = this.parsePokemon(
           rawTarget,
           ctx,
         );
         target = parsedTarget;
       }
-      this.handlerUtils.pushAction(
+      this.pushAction(
         {
           player,
           type: 'move',
           name: move ?? 'unknown',
-          user: pokemon,
+          user: pokemon ?? 'unknown',
           targets: target ? [target] : [],
           flags: {
             isMissingTargets: !target,
@@ -338,183 +121,194 @@ export class ShowdownSimProtocolParser implements BattleParser<string[]> {
       );
     },
     '-damage': (lineData, ctx) => {
-      const [_, rawPokemon, _rawHp, ...rawFromAndOf] = lineData;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      if (rawFromAndOf && rawFromAndOf.length) {
-        const {
-          from,
-          of,
-          inferredActionType: type,
-        } = this.handlerUtils.parseRest(rawFromAndOf, ctx);
+      const { args, kwArgs } = this.parseLineData<'|-damage|'>(lineData);
+      const [_, rawPokemon, _rawHp] = args;
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      if (kwArgs.from && kwArgs.of) {
+        const { from, inferredActionType: type } = this.parseFrom(kwArgs.from);
+        const { taggedPokemon: ofPokemon } = this.parsePokemon(kwArgs.of, ctx);
         const fromName = from?.fromName;
-        this.handlerUtils.pushAction(
+        this.pushAction(
           {
             type,
             name: `${fromName ?? 'unknown'} inflicted damage to`,
-            user: of?.taggedPokemon ?? '',
-            targets: [taggedPokemon],
+            user: ofPokemon ?? '',
+            targets: [taggedPokemon ?? 'unknown'],
           },
           ctx,
         );
       } else {
-        const lastMoveAction = this.handlerUtils.findLastMoveAction(ctx);
-        if (lastMoveAction && lastMoveAction.flags?.isMissingTargets) {
+        const lastMoveAction = this.findLastMoveAction(ctx);
+        if (
+          lastMoveAction &&
+          lastMoveAction.flags?.isMissingTargets &&
+          taggedPokemon
+        ) {
           lastMoveAction.targets.push(taggedPokemon);
         }
       }
     },
-    switch: this.handlerUtils.registerPokemon,
-    drag: this.handlerUtils.registerPokemon,
+    switch: (lineData, ctx) => this.registerPokemon('|switch|', lineData, ctx),
+    drag: (lineData, ctx) => this.registerPokemon('|drag|', lineData, ctx),
     detailschange: (lineData, ctx) =>
-      this.handlerUtils.registerFormChange('megaevolved to', lineData, ctx, {
-        shouldIncludePlayer: true,
-      }),
-    '-formechange': (lineData, ctx) => {
-      const [_, rawPokemon, species, ...rest] = lineData;
-      const fromAndOf = this.handlerUtils.parseRest(rest, ctx);
-      const name = fromAndOf.from?.fromName;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
+      this.registerFormChange(
+        '|detailschange|',
+        'megaevolved to',
+        lineData,
+        ctx,
         {
-          type: fromAndOf.inferredActionType,
+          shouldIncludePlayer: true,
+        },
+      ),
+    '-formechange': (lineData, ctx) => {
+      const { args, kwArgs } = this.parseLineData<'|-formechange|'>(lineData);
+      const [_, rawPokemon, species] = args;
+      const { from, inferredActionType: type } = this.parseFrom(kwArgs.from);
+      const name = from?.fromName;
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      this.pushAction(
+        {
+          type,
           name: name ?? 'changed its forme to',
           targets: [species ?? 'unknown'],
-          user: taggedPokemon,
+          user: taggedPokemon ?? 'unknown',
         },
         ctx,
       );
-      this.handlerUtils.registerPokemon(lineData, ctx);
+      this.registerPokemon('|-formechange|', lineData, ctx);
     },
     replace: (lineData, ctx) =>
-      this.handlerUtils.registerFormChange('illusion ended', lineData, ctx),
+      this.registerFormChange('|replace|', 'illusion ended', lineData, ctx),
     cant: (lineData, ctx) => {
-      const [_, rawPokemon, reason, move] = lineData;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
+      const { args } = this.parseLineData<'|cant|'>(lineData);
+      const [_, rawPokemon, rawReason, move] = args;
+      const reason = Protocol.parseEffect(rawReason);
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      this.pushAction(
         {
-          type: 'effect',
-          name: `cant not ${move} due to ${reason}`,
+          type: reason.type === 'ability' ? 'ability' : 'effect',
+          name: `cant not ${move} due to ${reason.name}`,
           targets: [],
-          user: taggedPokemon,
+          user: taggedPokemon ?? 'unknown',
         },
         ctx,
       );
     },
     faint: (lineData, ctx) => {
-      const [_, rawPokemon] = lineData;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
+      const { args } = this.parseLineData<'|faint|'>(lineData);
+      const [_, rawPokemon] = args;
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      this.pushAction(
         {
           type: 'effect',
           name: 'fainted',
           targets: [],
-          user: taggedPokemon,
+          user: taggedPokemon ?? 'unknown',
         },
         ctx,
       );
     },
     '-fail': (lineData, ctx) => {
-      const [_, rawPokemon, action] = lineData;
-      const { pokemon: target } = this.handlerUtils.parsePokemon(
-        rawPokemon,
-        ctx,
-      );
+      const { args } = this.parseLineData<'|-fail|'>(lineData);
+      const [_, rawPokemon, action] = args;
+      const { pokemon: target } = this.parsePokemon(rawPokemon, ctx);
       const { user = 'unknown' } = ctx.currActions.at(-1) ?? {};
-      this.handlerUtils.pushAction(
+      this.pushAction(
         {
           type: 'effect',
           name: `failed to ${action} against`,
-          targets: [target],
+          targets: [target ?? 'unknown'],
           user,
         },
         ctx,
       );
     },
     '-block': (lineData, ctx) => {
-      const [_, rawTarget, effect, move, rawAttacker] = lineData;
-      const { taggedPokemon: attacker } = this.handlerUtils.parsePokemon(
-        rawAttacker,
-        ctx,
-      );
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawTarget, ctx);
-      this.handlerUtils.pushAction(
+      const { args, kwArgs } = this.parseLineData<'|-block|'>(lineData);
+      const [_, rawTarget, rawBlockerEffect, blockedEffect, rawAttacker] = args;
+      const blockerEffect = Protocol.parseEffect(rawBlockerEffect);
+      const { taggedPokemon: attacker } = this.parsePokemon(rawAttacker, ctx);
+      const { taggedPokemon } = this.parsePokemon(kwArgs.of ?? rawTarget, ctx);
+      this.pushAction(
         {
-          type: 'effect',
-          name: `${effect} blocked ${move} from`,
-          targets: [attacker],
-          user: taggedPokemon,
+          type: blockerEffect.type === 'ability' ? 'ability' : 'effect',
+          name: `${blockerEffect.name} blocked ${blockedEffect} from`,
+          targets: attacker ? [attacker] : [],
+          user: taggedPokemon ?? 'unknown',
         },
         ctx,
       );
     },
     '-miss': (lineData, ctx) => {
-      const [_, rawPokemon, rawTarget] = lineData;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      const { taggedPokemon: target } = this.handlerUtils.parsePokemon(
-        rawTarget,
-        ctx,
-      );
+      const { args } = this.parseLineData<'|-miss|'>(lineData);
+      const [_, rawPokemon, rawTarget] = args;
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      const { taggedPokemon: target } = this.parsePokemon(rawTarget, ctx);
       const lastAction = ctx.currActions.at(-1);
       let move = 'unknown';
       if (lastAction && lastAction.type === 'move') {
         move = lastAction.name;
       }
-      this.handlerUtils.pushAction(
+      this.pushAction(
         {
           type: 'effect',
           name: `missed ${move} against`,
-          targets: [target],
-          user: taggedPokemon,
+          targets: target ? [target] : [],
+          user: taggedPokemon ?? 'unknown',
         },
         ctx,
       );
     },
     '-status': (lineData, ctx) => {
-      const [_, rawPokemon, status, ...rest] = lineData;
-      const fromAndOf = this.handlerUtils.parseRest(rest, ctx);
-      const fromName = fromAndOf.from?.fromName;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
+      const { args, kwArgs } = this.parseLineData<'|-status|'>(lineData);
+      const [_, rawPokemon, status] = args;
+      const { from, inferredActionType: type } = this.parseFrom(kwArgs.from);
+      const fromName = from?.fromName;
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      const { taggedPokemon: user } = this.parsePokemon(kwArgs.of, ctx);
+      this.pushAction(
         {
-          type: fromAndOf.inferredActionType,
+          type,
           name: fromName
             ? `${fromName} inflicted ${status}`
             : `${status} affected`,
-          targets: [taggedPokemon],
-          user: fromAndOf.of?.taggedPokemon ?? '',
+          targets: [taggedPokemon ?? 'unknown'],
+          user: user ?? '',
         },
         ctx,
       );
     },
     '-curestatus': (lineData, ctx) => {
-      const [_, rawPokemon, status, ...rest] = lineData;
-      const fromAndOf = this.handlerUtils.parseRest(rest, ctx);
-      const fromName = fromAndOf.from?.fromName;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
+      const { args, kwArgs } = this.parseLineData<'|-curestatus|'>(lineData);
+      const [_, rawPokemon, status] = args;
+      const { from, inferredActionType: type } = this.parseFrom(kwArgs.from);
+      const fromName = from?.fromName;
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      const { taggedPokemon: user } = this.parsePokemon(kwArgs.of, ctx);
+      this.pushAction(
         {
-          type: fromAndOf.inferredActionType,
+          type,
           name: fromName
             ? `${fromName} cured ${status}`
             : `recovered from ${status}`,
-          targets: fromName ? [taggedPokemon] : [],
-          user: fromName ? (fromAndOf.of?.taggedPokemon ?? '') : taggedPokemon,
+          targets: fromName ? [taggedPokemon ?? 'unknown'] : [],
+          user: fromName ? (user ?? '') : (taggedPokemon ?? 'unknown'),
         },
         ctx,
       );
     },
     '-boost': (lineData, ctx) =>
-      this.handlerUtils.boostChange('increased by', lineData, ctx),
+      this.boostChange('|-boost|', 'increased by', lineData, ctx),
     '-unboost': (lineData, ctx) =>
-      this.handlerUtils.boostChange('decreased by', lineData, ctx),
+      this.boostChange('|-unboost|', 'decreased by', lineData, ctx),
     '-setboost': (lineData, ctx) =>
-      this.handlerUtils.boostChange('changed to', lineData, ctx),
+      this.boostChange('|-setboost|', 'changed to', lineData, ctx),
     '-weather': (lineData, ctx) => {
-      const [_, weather, ...rest] = lineData;
-      const restData = this.handlerUtils.parseRest(rest, ctx);
-      if (restData.upkeep) return;
+      const { args, kwArgs } = this.parseLineData<'|-weather|'>(lineData);
+      const [_, weather] = args;
+      if (kwArgs.upkeep) return;
       if (weather === 'none') {
-        this.handlerUtils.pushAction(
+        this.pushAction(
           {
             type: 'effect',
             name: 'weather ended',
@@ -525,93 +319,106 @@ export class ShowdownSimProtocolParser implements BattleParser<string[]> {
         );
         return;
       }
-      const fromName = restData.from?.fromName;
-      this.handlerUtils.pushAction(
+      const { from, inferredActionType: type } = this.parseFrom(kwArgs.from);
+      const { taggedPokemon: user } = this.parsePokemon(kwArgs.of, ctx);
+      const fromName = from?.fromName;
+      this.pushAction(
         {
-          type: restData.inferredActionType,
+          type,
           name: (fromName ? `${fromName} set ` : '') + `weather ${weather}`,
-          user: restData.of?.taggedPokemon ?? '',
+          user: user ?? '',
           targets: [],
         },
         ctx,
       );
     },
     '-fieldstart': (lineData, ctx) =>
-      this.handlerUtils.field('started', lineData, ctx),
+      this.field('|-fieldstart|', 'started', lineData, ctx),
     '-fieldend': (lineData, ctx) =>
-      this.handlerUtils.field('ended', lineData, ctx),
+      this.field('|-fieldend|', 'ended', lineData, ctx),
     '-sidestart': (lineData, ctx) =>
-      this.handlerUtils.side('started', lineData, ctx),
+      this.side('|-sidestart|', 'started', lineData, ctx),
     '-sideend': (lineData, ctx) =>
-      this.handlerUtils.side('ended', lineData, ctx),
+      this.side('|-sideend|', 'ended', lineData, ctx),
     '-start': (lineData, ctx) =>
-      this.handlerUtils.volatileEffect('started', lineData, ctx),
+      this.volatileEffect('|-start|', 'started', lineData, ctx),
     '-end': (lineData, ctx) =>
-      this.handlerUtils.volatileEffect('ended', lineData, ctx),
+      this.volatileEffect('|-end|', 'ended', lineData, ctx),
     '-crit': (lineData, ctx) => {
-      const [_, rawPokemon] = lineData;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      const lastMove = this.handlerUtils.findLastMoveAction(ctx);
-      this.handlerUtils.pushAction(
+      const { args } = this.parseLineData<'|-crit|'>(lineData);
+      const [_, rawPokemon] = args;
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      const lastMove = this.findLastMoveAction(ctx);
+      this.pushAction(
         {
           type: 'effect',
           name: 'critical hit',
-          targets: [taggedPokemon],
+          targets: [taggedPokemon ?? 'unknown'],
           user: lastMove?.user ?? 'unknown',
         },
         ctx,
       );
     },
     '-ability': (lineData, ctx) => {
-      const [_, rawPokemon, ability] = lineData;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
+      const { args, kwArgs } = this.parseLineData<'|-ability|'>(lineData);
+      const [_, rawPokemon, rawAbility, rawOldAbility] = args;
+      const ability = Protocol.parseEffect(rawAbility);
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+
+      if (kwArgs.of || rawOldAbility) {
+        console.warn('[-ability] Ability change not implemented');
+        return;
+      }
+
+      this.pushAction(
         {
-          type: 'effect',
-          name: ability ?? 'unknown',
+          type: 'ability',
+          name: ability.name,
           targets: [],
-          user: taggedPokemon,
+          user: taggedPokemon ?? 'unknown',
         },
         ctx,
       );
     },
     '-zpower': (lineData, ctx) => {
-      const [_, rawPokemon] = lineData;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
+      const { args } = this.parseLineData<'|-zpower|'>(lineData);
+      const [_, rawPokemon] = args;
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      this.pushAction(
         {
           type: 'effect',
           name: 'used Z move',
           targets: [],
-          user: taggedPokemon,
+          user: taggedPokemon ?? 'unknown',
         },
         ctx,
       );
     },
     '-activate': (lineData, ctx) => {
-      const [_, rawEffect, ...rest] = lineData;
-      const restData = this.handlerUtils.parseRest(rest, ctx);
-      const fromName = restData.from?.fromName;
-      const effect = rawEffect ?? 'unknown';
-      this.handlerUtils.pushAction(
+      const { args } = this.parseLineData<'|-activate|'>(lineData);
+      const [_, rawPokemon, rawEffect] = args;
+      const effect = Protocol.parseEffect(rawEffect);
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      this.pushAction(
         {
-          type: restData.inferredActionType,
-          name: (fromName ? `${fromName} casued ` : '') + effect,
+          type: effect.type === 'ability' ? 'ability' : 'effect',
+          name: `activated ${effect.name}`,
           targets: [],
-          user: restData.of?.taggedPokemon ?? '',
+          user: taggedPokemon ?? 'unknown',
         },
         ctx,
       );
     },
     '-hitcount': (lineData, ctx) => {
-      const [_, rawPokemon, num] = lineData;
-      const { taggedPokemon } = this.handlerUtils.parsePokemon(rawPokemon, ctx);
-      this.handlerUtils.pushAction(
+      const { args } = this.parseLineData<'|-hitcount|'>(lineData);
+      const [_, rawPokemon, num] = args;
+      const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+      this.pushAction(
         {
           type: 'effect',
           name: `hit ${num} times`,
           targets: [],
-          user: taggedPokemon,
+          user: taggedPokemon ?? 'unknown',
         },
         ctx,
       );
@@ -637,6 +444,8 @@ export class ShowdownSimProtocolParser implements BattleParser<string[]> {
       nicknameToPokemonMap: {
         p1: {},
         p2: {},
+        p3: {},
+        p4: {},
       },
     };
     for (const line of data) {
@@ -654,6 +463,259 @@ export class ShowdownSimProtocolParser implements BattleParser<string[]> {
       console.warn('Some actions were not assigned');
     }
     return { turns: ctx.turns, result: ctx.result };
+  }
+
+  parseLineData<command extends BattleArgName>(
+    lineData: (string | undefined)[],
+  ) {
+    const { args, kwArgs } = Protocol.parseBattleLine(
+      ['', ...lineData].join('|'),
+    ) as {
+      args: Args[command];
+      kwArgs: KWArgs[command];
+    };
+    return { args, kwArgs };
+  }
+
+  pushTurn(ctx: SSPPContext) {
+    ctx.turns.push({
+      index: ctx.currTurnIndex,
+      actions: ctx.currActions,
+    });
+    ctx.currActions = [];
+  }
+
+  pushAction(action: Omit<ActionWithContext, 'index'>, ctx: SSPPContext) {
+    const index = ctx.currActions.length;
+    ctx.currActions.push({
+      index,
+      ...action,
+    });
+  }
+
+  findLastMoveAction(ctx: SSPPContext) {
+    for (let index = 0; index < ctx.currActions.length; index++) {
+      if (ctx.currActions.at(-(index + 1))?.type === 'move') {
+        return ctx.currActions.at(-(index + 1));
+      }
+    }
+    return undefined;
+  }
+
+  parsePokemon(rawPokemon: PokemonIdent | '' | undefined, ctx: SSPPContext) {
+    if (!rawPokemon) {
+      return {
+        player: undefined,
+        pokemon: undefined,
+        taggedPokemon: undefined,
+        position: undefined,
+      };
+    }
+    const {
+      player,
+      name: nameOrNickname,
+      position,
+    } = Protocol.parsePokemonIdent(rawPokemon);
+    const pokemon =
+      ctx.nicknameToPokemonMap[player][nameOrNickname] ?? nameOrNickname;
+    return { player, pokemon, taggedPokemon: `${player}:${pokemon}`, position };
+  }
+
+  parseFrom(from: FromArg | undefined) {
+    const result: FromData = {
+      inferredActionType: 'effect',
+      from: undefined,
+    };
+    if (from) {
+      const { type, name } = Protocol.parseEffect(from);
+      console.log({ type, name, from });
+      result.from = {
+        type,
+        name,
+        raw: from,
+      };
+      result.inferredActionType = this.getTypeFrom(result);
+      result.from.fromName =
+        result.inferredActionType === 'ability'
+          ? result.from.name
+          : result.from.raw;
+    }
+    return result;
+  }
+
+  registerPokemon<
+    command extends
+      | '|switch|'
+      | '|drag|'
+      | '|-formechange|'
+      | '|detailschange|'
+      | '|replace|',
+  >(_command: command, lineData: (string | undefined)[], ctx: SSPPContext) {
+    const { args } = this.parseLineData<command>(lineData);
+    const [_, rawPokemon, detailsOrSpecies] = args;
+    if (!rawPokemon || !detailsOrSpecies) {
+      throw new CommandHandlerError(
+        'pokemon or details is undefined',
+        lineData,
+        ctx,
+      );
+    }
+    const { player, pokemon: nameOrNickname } = this.parsePokemon(
+      rawPokemon,
+      ctx,
+    );
+    let species = undefined;
+    if (detailsOrSpecies.__brand === 'SpeciesName') {
+      species = detailsOrSpecies;
+    } else {
+      const { speciesForme } = Protocol.parseDetails(
+        nameOrNickname ?? '',
+        rawPokemon,
+        detailsOrSpecies,
+      );
+      species = speciesForme;
+    }
+    if (player && nameOrNickname) {
+      ctx.nicknameToPokemonMap[player][nameOrNickname] =
+        species ?? nameOrNickname;
+    } else {
+      console.warn('Failed to register pokemon', lineData);
+    }
+  }
+
+  registerFormChange<command extends '|detailschange|' | '|replace|'>(
+    _command: command,
+    reason: string,
+    lineData: (string | undefined)[],
+    ctx: SSPPContext,
+    options: { shouldIncludePlayer?: boolean } = {},
+  ) {
+    const { args } = this.parseLineData<command>(lineData);
+    const [_, rawPokemon, rawDetails] = args;
+    if (!rawPokemon) {
+      throw new CommandHandlerError('pokemon is undefined', lineData, ctx);
+    }
+    const { player, taggedPokemon, pokemon } = this.parsePokemon(
+      rawPokemon,
+      ctx,
+    );
+    let species = 'unknown';
+    if (rawDetails) {
+      const { speciesForme: newSpecies } = Protocol.parseDetails(
+        pokemon ?? '',
+        rawPokemon,
+        rawDetails,
+      );
+      species = newSpecies;
+    }
+    this.pushAction(
+      {
+        player: options.shouldIncludePlayer ? player : undefined,
+        type: 'effect',
+        name: reason,
+        targets: [species],
+        user:
+          (options.shouldIncludePlayer ? pokemon : taggedPokemon) ?? 'unknown',
+      },
+      ctx,
+    );
+    this.registerPokemon<command>(_command, lineData, ctx);
+  }
+
+  boostChange<command extends '|-boost|' | '|-unboost|' | '|-setboost|'>(
+    _command: command,
+    label: string,
+    lineData: (string | undefined)[],
+    ctx: SSPPContext,
+  ) {
+    const { args, kwArgs } = this.parseLineData<command>(lineData);
+    const [_, rawPokemon, stat, amount] = args;
+    const { from, inferredActionType: type } = this.parseFrom(kwArgs.from);
+    const fromName = from?.fromName;
+    const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+    const { taggedPokemon: ofPokemon } = this.parsePokemon(kwArgs.of, ctx);
+    this.pushAction(
+      {
+        type,
+        name: fromName
+          ? `${fromName} caused ${stat} ${label} ${amount} to`
+          : `${stat} ${label} ${amount}`,
+        targets: fromName ? [taggedPokemon ?? 'unknown'] : [],
+        user: fromName ? (ofPokemon ?? '') : (taggedPokemon ?? 'unknown'),
+      },
+      ctx,
+    );
+  }
+
+  volatileEffect<command extends '|-start|' | '|-end|'>(
+    _command: command,
+    label: string,
+    lineData: (string | undefined)[],
+    ctx: SSPPContext,
+  ) {
+    const { args, kwArgs } = this.parseLineData<command>(lineData);
+    const [_, rawPokemon, rawEffect] = args;
+    const { from, inferredActionType } = this.parseFrom(kwArgs.from);
+    const fromName = from?.fromName;
+    const { taggedPokemon } = this.parsePokemon(rawPokemon, ctx);
+    const { taggedPokemon: ofPokemon } = this.parsePokemon(kwArgs.of, ctx);
+    const effect = Protocol.parseEffect(rawEffect);
+    this.pushAction(
+      {
+        type: effect.type === 'ability' ? 'ability' : inferredActionType,
+        name:
+          (fromName ? `${fromName} caused ` : '') +
+          `${effect.name} ${label} on`,
+        targets: [taggedPokemon ?? 'unknown'],
+        user: ofPokemon ?? '',
+      },
+      ctx,
+    );
+  }
+
+  field<command extends '|-fieldstart|' | '|-fieldend|'>(
+    _command: command,
+    label: string,
+    lineData: (string | undefined)[],
+    ctx: SSPPContext,
+  ) {
+    const { args, kwArgs } = this.parseLineData<command>(lineData);
+    const [_, condition] = args;
+    const { from, inferredActionType: type } = this.parseFrom(kwArgs.from);
+    const fromName = from?.fromName;
+    const { taggedPokemon: ofPokemon } = this.parsePokemon(kwArgs.of, ctx);
+    this.pushAction(
+      {
+        type,
+        name: (fromName ? `${fromName} caused ` : '') + `${condition} ${label}`,
+        user: ofPokemon ?? '',
+        targets: [],
+      },
+      ctx,
+    );
+  }
+
+  side<command extends '|-sidestart|' | '|-sideend|'>(
+    _command: command,
+    label: string,
+    lineData: (string | undefined)[],
+    ctx: SSPPContext,
+  ) {
+    const { args } = this.parseLineData<command>(lineData);
+    const [_, side, condition] = args;
+    this.pushAction(
+      {
+        type: 'effect',
+        name: `${condition} ${label} for ${side}`,
+        user: '',
+        targets: [],
+      },
+      ctx,
+    );
+  }
+
+  getTypeFrom(data: FromData): Action['type'] {
+    return data.from?.type === 'ability' ? 'ability' : 'effect';
   }
 }
 
