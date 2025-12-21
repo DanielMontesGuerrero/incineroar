@@ -1,10 +1,11 @@
 'use client';
 
-import { Alert, Col, Row, Skeleton } from 'antd';
+import { Alert, Col, Flex, Row, Skeleton } from 'antd';
 import { use, useState } from 'react';
 
 import { useTrainingQuery } from '@/src/hooks/training-queries';
 
+import ImportBattles from '../components/ImportBattle';
 import NewBattle from '../components/NewBattle';
 import TrainingsOrBattlesTable from '../components/TrainingsOrBattlesTable';
 
@@ -29,7 +30,10 @@ const Page = ({ params }: { params: Promise<{ trainingId: string }> }) => {
         </Row>
       )}
       <Row className="mb-3">
-        <NewBattle trainingId={trainingId} onError={setErrorMessage} />
+        <Flex gap={3}>
+          <NewBattle trainingId={trainingId} onError={setErrorMessage} />
+          <ImportBattles training={data.training} />
+        </Flex>
       </Row>
       <Row>
         <Col span={24}>

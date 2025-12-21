@@ -23,6 +23,8 @@ const ActionTypeEnumList: Action['type'][] = [
   'effect',
 ];
 
+const PlayerEnumList: Action['player'][] = ['p1', 'p2', 'p3', 'p4'];
+
 const ActionSchema = new Schema<Action>(
   {
     index: { type: Number, required: true },
@@ -31,7 +33,8 @@ const ActionSchema = new Schema<Action>(
       requried: true,
       enum: ActionTypeEnumList,
     },
-    user: { type: String, required: true },
+    user: { type: String },
+    player: { type: String, enum: PlayerEnumList },
     targets: [{ type: String, required: true }],
     name: { type: String, required: true },
   },

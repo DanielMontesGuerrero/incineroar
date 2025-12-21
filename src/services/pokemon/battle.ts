@@ -11,6 +11,7 @@ import {
 } from '@pkmn/protocol';
 
 import { Action, Battle, CreateBattleData, Turn } from '@/src/types/api';
+import { BattleDataSource } from '@/src/types/form';
 
 interface ActionWithContext extends Action {
   flags?: {
@@ -19,7 +20,7 @@ interface ActionWithContext extends Action {
 }
 
 export type BattleMetadata = Omit<CreateBattleData, 'turns' | 'result'>;
-export type ParserType = 'showdown-sim-protocol';
+export type ParserType = BattleDataSource;
 
 export interface BattleParser<T> {
   parserType: ParserType;
@@ -87,14 +88,16 @@ interface FromData {
 
 type FromArg = AbilityName | MoveName | EffectName;
 
-export class ShowdownSimProtocolParser implements BattleParser<string[]> {
+export class ShowdownSimProtocolParser
+  implements BattleParser<string[] | string>
+{
   parserType = 'showdown-sim-protocol' as const;
 
   protected commandHandlers: Record<string, CommandHandler> = {
     turn: (lineData, ctx) => {
       const { args } = this.parseLineData<'|turn|'>(lineData);
       const [_, rawTurnIndex] = args;
-      const turnIndex = Number(rawTurnIndex);
+      const turnIndex = Number(rawTurnIndex) - 1;
       if (turnIndex > 1) {
         this.pushTurn(ctx);
       }
@@ -539,7 +542,8 @@ export class ShowdownSimProtocolParser implements BattleParser<string[]> {
     },
   };
 
-  parse(metadata: BattleMetadata, data: string[]) {
+  parse(metadata: BattleMetadata, rawData: string[] | string) {
+    const data = typeof rawData === 'string' ? rawData.split('\r\n') : rawData;
     const { turns, result } = this.parseTurns(data);
     const battle: CreateBattleData = {
       ...metadata,
@@ -893,5 +897,15 @@ export class CommandHandlerError extends Error {
     super(message);
     this.lineData = lineData;
     this.ctx = ctx;
+  }
+}
+
+export default class BattleParserFactory {
+  static parsers: Record<ParserType, BattleParser<string[] | string>> = {
+    'showdown-sim-protocol': new ShowdownSimProtocolParser(),
+  };
+
+  static getParser(parserType: ParserType) {
+    return BattleParserFactory.parsers[parserType];
   }
 }

@@ -33,3 +33,14 @@ export type EditBattleFormData = Omit<Battle, 'team' | 'createdAt'> & {
   teamId?: string;
   trainingId: string;
 };
+
+export type BattleDataSource = 'showdown-sim-protocol';
+
+export type ImportBattlesFormData = {
+  source: BattleDataSource;
+  trainingId: string;
+  battles: {
+    name: string;
+    data: string;
+  }[];
+};

@@ -12,12 +12,17 @@ import {
   TrainingNotFoundError,
 } from '@/src/db/models/training';
 import UserRepository from '@/src/db/models/user';
+import BattleParserFactory, {
+  BattleMetadata,
+} from '@/src/services/pokemon/battle';
 import { Action, Battle, Team } from '@/src/types/api';
 import {
   AddTrainingFormData,
+  BattleDataSource,
   EditBattleFormData,
   EditTrainingFormData,
   FormActionState,
+  ImportBattlesFormData,
 } from '@/src/types/form';
 
 export type AddTrainingActionState = FormActionState<AddTrainingFormData>;
@@ -329,4 +334,84 @@ export const createBattle = async (trainingId: string) => {
     console.error('Error creating battle', error);
     return null;
   }
+};
+
+export type ImportBattlesFormActionState =
+  FormActionState<ImportBattlesFormData>;
+const dataSources = [
+  'showdown-sim-protocol',
+] satisfies ReadonlyArray<BattleDataSource>;
+
+const importBattlesFormDataSchema = z.object({
+  trainingId: z.string().min(1, 'Invalid id').max(50, 'Invalid id'),
+  source: z.union(
+    dataSources.map((val) => z.literal(val)),
+    'Invalid source',
+  ),
+  battles: z.array(
+    z.object({
+      name: z
+        .string()
+        .min(1, 'At leat 1 character')
+        .max(100, 'At most 100 characters'),
+      data: z
+        .string()
+        .min(1, 'At leat 1 character')
+        .max(10000, 'At most 10000 characters'),
+    }),
+  ),
+});
+
+export const importBattles = async (
+  _state: ImportBattlesFormActionState,
+  formData: FormData,
+): Promise<ImportBattlesFormActionState> => {
+  const rawData = decode(formData) as unknown as ImportBattlesFormData;
+  console.log(rawData);
+
+  const validatedFields = importBattlesFormDataSchema.safeParse(rawData);
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      data: rawData,
+      errors: z.treeifyError(validatedFields.error).properties,
+    };
+  }
+
+  try {
+    await DBConnection.connect();
+    const { id: userId } = await verifyUserAuth();
+
+    const userRepo = new UserRepository();
+    const parser = BattleParserFactory.getParser(validatedFields.data.source);
+    const trainingId = validatedFields.data.trainingId;
+    const promises = validatedFields.data.battles.map((battle) => {
+      const battleMetadata: BattleMetadata = {
+        name: battle.name,
+        notes: '',
+      };
+      const createBattleData = parser.parse(battleMetadata, battle.data);
+      return userRepo.addNewBattle(userId, trainingId, createBattleData);
+    });
+    await Promise.all(promises);
+    console.log('Successfully imported battles');
+  } catch (error) {
+    console.error('Failed to import battles', error);
+    if (error instanceof TrainingNotFoundError) {
+      return {
+        success: false,
+        data: validatedFields.data,
+        error: 'Training not found',
+      };
+    }
+
+    return baseFormActionErrorHandler<ImportBattlesFormData>(
+      error,
+      validatedFields.data,
+      'Unexpected error',
+    );
+  }
+  return {
+    success: true,
+  };
 };
