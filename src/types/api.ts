@@ -145,3 +145,77 @@ export type CreateTrainingData = Omit<
   Training,
   'id' | 'isDefault' | 'battles' | 'createdAt'
 >;
+
+export interface BattleResultAnalytics {
+  result: string;
+  count: number;
+}
+
+export interface MatchupAnalytics {
+  pokemon: string[];
+  results: BattleResultAnalytics[];
+  pairings: {
+    pokemon: string[];
+    results: BattleResultAnalytics[];
+    encounterCount: number;
+  };
+  usageCount: number;
+}
+
+export interface PokemonKoOrFaintAnalytics {
+  matchups: {
+    pokemon: string;
+    count: number;
+  }[];
+  count: number;
+}
+
+export interface PerformanceAnalytics {
+  ko: PokemonKoOrFaintAnalytics;
+  faint: PokemonKoOrFaintAnalytics;
+  damage: unknown;
+}
+
+export interface BattleMovesAnalytics {
+  move: string;
+  averageUsage: number;
+  averageUsageByMatch: number;
+}
+
+export interface BattlePokemonAnalytics {
+  pokemon: string;
+  performance: PerformanceAnalytics[];
+  usageCount: number;
+  moves: BattleMovesAnalytics[];
+}
+
+export interface TurnMap {
+  [turn: number]: number;
+}
+
+export interface PokemonKeyActionAnalytics {
+  actionName: string;
+  usage: {
+    pokemon: string;
+    count: number;
+  };
+}
+
+export interface KeyActionsAnalytics {
+  kos: TurnMap;
+  faints: TurnMap;
+  switch: TurnMap;
+  pokemonKeyActions: {
+    byMe: PokemonKeyActionAnalytics[];
+    byRival: PokemonKeyActionAnalytics[];
+  };
+}
+
+export interface TrainingAnalytics {
+  matchups: {
+    all: MatchupAnalytics[];
+    openings: MatchupAnalytics[];
+  };
+  pokemon: BattlePokemonAnalytics[];
+  keyActions: KeyActionsAnalytics;
+}
