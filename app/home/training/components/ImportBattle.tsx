@@ -166,7 +166,6 @@ const ImportBattles = ({ training }: ImportBattlesProps) => {
   return (
     <>
       <Button
-        type="primary"
         icon={<PlusCircleOutlined />}
         onClick={() => setIsModalOpen(true)}
       >

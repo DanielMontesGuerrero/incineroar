@@ -18,4 +18,6 @@ export const TrainingKeys = {
   training: (id: string) => ['training', id] as const,
   battle: (trainingId: string, battleId: string) =>
     ['training', trainingId, 'battle', battleId] as const,
+  trainingAnalysis: (trainingId: string) =>
+    ['training', trainingId, 'analysis'] as const,
 };

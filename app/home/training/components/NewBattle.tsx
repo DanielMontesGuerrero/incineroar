@@ -1,3 +1,4 @@
+import { PlusCircleOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { useRouter } from 'next/navigation';
 
@@ -30,7 +31,11 @@ const NewBattle = ({ trainingId, onError }: NewBattleProps) => {
   }
 
   return (
-    <Button type="primary" onClick={() => void onNewBattle()}>
+    <Button
+      type="primary"
+      icon={<PlusCircleOutlined />}
+      onClick={() => void onNewBattle()}
+    >
       New battle
     </Button>
   );

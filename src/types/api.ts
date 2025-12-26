@@ -154,11 +154,7 @@ export interface BattleResultAnalytics {
 export interface MatchupAnalytics {
   pokemon: string[];
   results: BattleResultAnalytics[];
-  pairings: {
-    pokemon: string[];
-    results: BattleResultAnalytics[];
-    encounterCount: number;
-  }[];
+  pairings?: MatchupAnalytics[];
   usageCount: number;
 }
 

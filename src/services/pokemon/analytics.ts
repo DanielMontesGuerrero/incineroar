@@ -336,16 +336,12 @@ class MatchupTracker {
       results.push({ result, count });
     });
 
-    const pairings: {
-      pokemon: string[];
-      results: BattleResultAnalytics[];
-      encounterCount: number;
-    }[] = [];
+    const pairings: MatchupAnalytics[] = [];
     this.pairingsTracker.forEach((tracker) => {
       pairings.push({
         pokemon: tracker.pokemon,
         results: tracker.getAnalysisResult().results,
-        encounterCount: tracker.count,
+        usageCount: tracker.count,
       });
     });
 

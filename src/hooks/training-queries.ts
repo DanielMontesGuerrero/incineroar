@@ -6,6 +6,7 @@ import {
   DELETE_BATTLE,
   GET_BATTLE,
   GET_TRAINING,
+  GET_TRAINING_ANALYSIS,
   GET_TRAININGS,
 } from '../types/endpoints';
 import { queryClient } from '../utils/query-clients';
@@ -35,6 +36,21 @@ const deleteBattle = async (trainingId: string, battleId: string) => {
   return await axios.delete<DELETE_BATTLE>(
     `/api/user/training/${trainingId}/battle/${battleId}`,
   );
+};
+
+const getTrainingAnalysis = async (trainingId: string) => {
+  const result = await axios.get<GET_TRAINING_ANALYSIS>(
+    `/api/user/training/${trainingId}/analyze`,
+  );
+  return result.data;
+};
+
+export const useTrainingAnalysisQuery = (trainingId: string) => {
+  return useQuery({
+    queryKey: TrainingKeys.trainingAnalysis(trainingId),
+    queryFn: () => getTrainingAnalysis(trainingId),
+    staleTime: Infinity,
+  });
 };
 
 export const useDeleteBattleMutation = (

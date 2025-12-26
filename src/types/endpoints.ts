@@ -5,6 +5,7 @@ import {
   Team,
   Tournament,
   Training,
+  TrainingAnalytics,
 } from './api';
 
 export interface GET_TOURNAMENT {
@@ -50,4 +51,8 @@ export interface GET_BATTLE {
 
 export interface DELETE_BATTLE {
   success: true;
+}
+
+export interface GET_TRAINING_ANALYSIS {
+  analysis: TrainingAnalytics;
 }
