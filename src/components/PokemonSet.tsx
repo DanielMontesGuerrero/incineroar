@@ -73,7 +73,7 @@ const PokemonSet = ({ pokemon }: PokemonSetProps) => {
             <Item>
               <Text>
                 {`Tera type: `}
-                <TypeBadge type={pokemon.teraType} isTera />
+                <TypeBadge type={pokemon.teraType} />
               </Text>
             </Item>
           </List>
