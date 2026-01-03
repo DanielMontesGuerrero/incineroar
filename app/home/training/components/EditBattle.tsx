@@ -76,63 +76,28 @@ const filterPokemonByPlayer = (
   return Array.from(new Set([...users, ...targets]));
 };
 
-const getOptions = ({
-  searchText,
-  player,
-  pokemonP1,
-  pokemonP2,
-  autocompleteService,
-}: {
-  searchText: string;
-  player?: Action['player'] | null;
-  pokemonP1: string[];
-  pokemonP2: string[];
-  autocompleteService?: AutocompleteService;
-}) => {
-  const list: string[] = [];
-  const playerTag = searchText.includes(':')
-    ? searchText.split(':')[0]
-    : player;
-  const searchPokemon = searchText.replace(`${playerTag}:`, '');
-  if (playerTag === 'p1') {
-    list.push(
-      ...pokemonP1.filter(
-        (name) => autocompleteService?.hasWord(name) ?? false,
+const useFilteredPokemon = (
+  turns: Turn[] | undefined,
+  player: Exclude<Action['player'], undefined>,
+) => {
+  return useMemo(
+    () =>
+      filterPokemonByPlayer(
+        (turns ?? []).flatMap((turn) => turn.actions),
+        player,
       ),
-    );
-  }
-  if (playerTag === 'p2') {
-    list.push(
-      ...pokemonP2.filter(
-        (name) => autocompleteService?.hasWord(name) ?? false,
-      ),
-    );
-  }
-  if (autocompleteService && searchPokemon.length >= 2) {
-    list.push(...(autocompleteService.getSuggestions(searchPokemon) ?? []));
-  }
-  return Array.from(new Set(list));
+    [turns, player],
+  );
 };
 
-const PokemonInput = ({ player, value, onChange }: PokemonInputProps) => {
+const usePokemonAutocomplete = (
+  value?: string,
+  player?: Action['player'] | null | 'all',
+) => {
   const { autocompleteService, form } = useContext(EditBattleFormContext);
   const turns = useWatch(['turns'], form);
-  const pokemonP1 = useMemo(
-    () =>
-      filterPokemonByPlayer(
-        (turns ?? []).flatMap((turn) => turn.actions),
-        'p1',
-      ),
-    [turns],
-  );
-  const pokemonP2 = useMemo(
-    () =>
-      filterPokemonByPlayer(
-        (turns ?? []).flatMap((turn) => turn.actions),
-        'p2',
-      ),
-    [turns],
-  );
+  const pokemonP1 = useFilteredPokemon(turns, 'p1');
+  const pokemonP2 = useFilteredPokemon(turns, 'p2');
   const baseOptions = useMemo(
     () =>
       getOptions({
@@ -142,10 +107,134 @@ const PokemonInput = ({ player, value, onChange }: PokemonInputProps) => {
         pokemonP2,
         autocompleteService,
       }),
-    [value, player, pokemonP1, pokemonP2, autocompleteService],
+    [value, pokemonP1, pokemonP2, autocompleteService, player],
   );
   const [options, setOptions] = useState<string[]>([]);
   const [, startTransition] = useTransition();
+
+  return {
+    pokemonP1,
+    pokemonP2,
+    baseOptions,
+    options,
+    setOptions,
+    startTransition,
+    autocompleteService,
+  };
+};
+
+const withTagOnChange = (
+  newValue: string,
+  prevValue?: string,
+  onChange?: (value: string) => void,
+) => {
+  if (
+    prevValue?.includes(':') &&
+    !prevValue.startsWith(newValue) &&
+    !newValue.includes(':')
+  ) {
+    const [prefix] = prevValue.split(':');
+    onChange?.(`${prefix}:${newValue}`);
+    return;
+  }
+  onChange?.(newValue);
+};
+
+const getOptions = ({
+  searchText,
+  player,
+  pokemonP1,
+  pokemonP2,
+  autocompleteService,
+}: {
+  searchText: string;
+  player?: Action['player'] | null | 'all';
+  pokemonP1: string[];
+  pokemonP2: string[];
+  autocompleteService?: AutocompleteService;
+}) => {
+  const list: string[] = [];
+  const playerTag = searchText.includes(':')
+    ? searchText.split(':')[0]
+    : player;
+  const searchPokemon = searchText.replace(`${playerTag}:`, '');
+  if (playerTag === 'p1' || playerTag === 'all') {
+    list.push(
+      ...pokemonP1
+        .filter((name) => autocompleteService?.hasWord(name) ?? false)
+        .map((name) => (playerTag === 'all' ? 'p1:' : '') + name),
+    );
+  }
+  if (playerTag === 'p2' || playerTag === 'all') {
+    list.push(
+      ...pokemonP2
+        .filter((name) => autocompleteService?.hasWord(name) ?? false)
+        .map((name) => (playerTag === 'all' ? 'p2' : '') + name),
+    );
+  }
+  if (autocompleteService && searchPokemon.length >= 2) {
+    list.push(...(autocompleteService.getSuggestions(searchPokemon) ?? []));
+  }
+  return Array.from(new Set(list));
+};
+
+interface PokemonMultiSelectProps {
+  value?: string[];
+  onChange?: (value: string[]) => void;
+}
+
+const PokemonMultiSelect = ({ value, onChange }: PokemonMultiSelectProps) => {
+  const {
+    setOptions,
+    startTransition,
+    baseOptions,
+    options,
+    pokemonP1,
+    pokemonP2,
+    autocompleteService,
+  } = usePokemonAutocomplete('', 'all');
+
+  const onSearch: SelectProps['onSearch'] = (searchText) => {
+    startTransition(() => {
+      const tag = searchText.includes(':') ? searchText.split(':')[0] : null;
+      const list = getOptions({
+        searchText,
+        pokemonP1,
+        pokemonP2,
+        autocompleteService,
+      });
+      if (tag) {
+        for (let i = 0; i < list.length; i++) {
+          list[i] = `${tag}:${list[i]}`;
+        }
+      }
+      setOptions(list);
+    });
+  };
+
+  return (
+    <Select
+      mode="tags"
+      placeholder="Enter targets"
+      className="w-[200px]"
+      value={value}
+      onChange={onChange}
+      options={toOptions(options.length > 1 ? options : baseOptions)}
+      onSearch={onSearch}
+    />
+  );
+};
+
+const PokemonInput = ({ player, value, onChange }: PokemonInputProps) => {
+  const {
+    setOptions,
+    startTransition,
+    baseOptions,
+    options,
+    pokemonP1,
+    pokemonP2,
+    autocompleteService,
+  } = usePokemonAutocomplete(value, player);
 
   const onSearch: SelectProps['onSearch'] = (searchText) => {
     startTransition(() => {
@@ -160,23 +249,13 @@ const PokemonInput = ({ player, value, onChange }: PokemonInputProps) => {
     });
   };
 
-  const withTagOnChange = (val: string) => {
-    if (value?.includes(':') && !value.startsWith(val) && !val.includes(':')) {
-      const [prefix] = value.split(':');
-      onChange?.(`${prefix}:${val}`);
-      return;
-    }
-    onChange?.(val);
-  };
-
   return (
     <AutoComplete
       value={value}
-      onChange={withTagOnChange}
+      onChange={(val) => withTagOnChange(val, value, onChange)}
       options={toOptions(options.length > 0 ? options : baseOptions)}
       onSearch={onSearch}
       className="min-w-[200px]"
-      defaultOpen
     />
   );
 };
@@ -242,11 +321,7 @@ const ActionFormFields = ({
         <Input />
       </ActionFormItem>
       <ActionFormItem name={[baseName, 'targets']} label="Targets">
-        <Select
-          className="min-w-[150px]"
-          mode="tags"
-          placeholder="Enter targets"
-        />
+        <PokemonMultiSelect />
       </ActionFormItem>
       <FormItem>
         <Flex gap={2}>
