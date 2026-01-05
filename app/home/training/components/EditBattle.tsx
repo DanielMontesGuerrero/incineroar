@@ -15,6 +15,7 @@ import {
   Input,
   Select,
   SelectProps,
+  Tabs,
 } from 'antd';
 import { useWatch } from 'antd/es/form/Form';
 import FormItem from 'antd/es/form/FormItem';
@@ -65,6 +66,8 @@ interface IEditBattleFormContext {
   abilityAutocomplete?: AutocompleteService;
   actionNameAutocomplete?: AutocompleteService;
   form?: FormInstance<EditBattleFormData>;
+  baseP1Pokemon?: string[];
+  baseP2Pokemon?: string[];
 }
 
 const EditBattleFormContext = createContext<IEditBattleFormContext>({});
@@ -92,46 +95,30 @@ const filterPokemonByPlayer = (
   return Array.from(new Set([...users, ...targets]));
 };
 
-const useFilteredPokemon = (
-  turns: Turn[] | undefined,
-  player: Exclude<Action['player'], undefined>,
-) => {
-  return useMemo(
-    () =>
-      filterPokemonByPlayer(
-        (turns ?? []).flatMap((turn) => turn.actions),
-        player,
-      ),
-    [turns, player],
-  );
-};
-
 const usePokemonAutocomplete = (
   value?: string,
   player?: Action['player'] | null | 'all',
 ) => {
-  const { pokemonAutocomplete, form } = useContext(EditBattleFormContext);
-  const turns = useWatch(['turns'], form);
-  const pokemonP1 = useFilteredPokemon(turns, 'p1');
-  const pokemonP2 = useFilteredPokemon(turns, 'p2');
+  const { pokemonAutocomplete, form, baseP1Pokemon, baseP2Pokemon } =
+    useContext(EditBattleFormContext);
   const baseOptions = useMemo(
     () =>
-      getOptions({
-        searchText: value ?? '',
-        player,
-        pokemonP1,
-        pokemonP2,
-        pokemonAutocomplete,
-      }),
-    [value, pokemonP1, pokemonP2, pokemonAutocomplete, player],
+      player === 'p1'
+        ? (baseP1Pokemon ?? [])
+        : player === 'p2'
+          ? (baseP2Pokemon ?? [])
+          : [
+              ...(baseP1Pokemon?.map((name) => `p1:${name}`) ?? []),
+              ...(baseP2Pokemon?.map((name) => `p2:${name}`) ?? []),
+            ],
+    [player, baseP1Pokemon, baseP2Pokemon],
   );
   const [options, setOptions] = useState<string[]>([]);
   const [, startTransition] = useTransition();
 
   return {
-    pokemonP1,
-    pokemonP2,
     baseOptions,
+    form,
     options,
     setOptions,
     startTransition,
@@ -159,16 +146,24 @@ const withTagOnChange = (
 const getOptions = ({
   searchText,
   player,
-  pokemonP1,
-  pokemonP2,
+  form,
   pokemonAutocomplete,
 }: {
   searchText: string;
   player?: Action['player'] | null | 'all';
-  pokemonP1: string[];
-  pokemonP2: string[];
+  form?: FormInstance<EditBattleFormData>;
   pokemonAutocomplete?: AutocompleteService;
 }) => {
+  const pokemonP1 = filterPokemonByPlayer(
+    (form?.getFieldValue('turns') as Turn[])?.flatMap((turn) => turn.actions) ??
+      [],
+    'p1',
+  );
+  const pokemonP2 = filterPokemonByPlayer(
+    (form?.getFieldValue('turns') as Turn[])?.flatMap((turn) => turn.actions) ??
+      [],
+    'p2',
+  );
   const list: string[] = [];
   const playerTag = searchText.includes(':')
     ? searchText.split(':')[0]
@@ -205,9 +200,8 @@ const PokemonMultiSelect = ({ value, onChange }: PokemonMultiSelectProps) => {
     startTransition,
     baseOptions,
     options,
-    pokemonP1,
-    pokemonP2,
     pokemonAutocomplete,
+    form,
   } = usePokemonAutocomplete('', 'all');
 
   const onSearch: SelectProps['onSearch'] = (searchText) => {
@@ -215,8 +209,7 @@ const PokemonMultiSelect = ({ value, onChange }: PokemonMultiSelectProps) => {
       const tag = searchText.includes(':') ? searchText.split(':')[0] : null;
       const list = getOptions({
         searchText,
-        pokemonP1,
-        pokemonP2,
+        form,
         pokemonAutocomplete,
       });
       if (tag) {
@@ -237,6 +230,7 @@ const PokemonMultiSelect = ({ value, onChange }: PokemonMultiSelectProps) => {
       onChange={onChange}
       options={toOptions(options.length > 1 ? options : baseOptions)}
       onSearch={onSearch}
+      virtual
     />
   );
 };
@@ -247,9 +241,8 @@ const PokemonInput = ({ player, value, onChange }: PokemonInputProps) => {
     startTransition,
     baseOptions,
     options,
-    pokemonP1,
-    pokemonP2,
     pokemonAutocomplete,
+    form,
   } = usePokemonAutocomplete(value, player);
 
   const onSearch: SelectProps['onSearch'] = (searchText) => {
@@ -257,9 +250,8 @@ const PokemonInput = ({ player, value, onChange }: PokemonInputProps) => {
       const list = getOptions({
         searchText,
         player,
-        pokemonP1,
-        pokemonP2,
         pokemonAutocomplete,
+        form,
       });
       setOptions(list);
     });
@@ -273,6 +265,7 @@ const PokemonInput = ({ player, value, onChange }: PokemonInputProps) => {
       onSearch={onSearch}
       className="min-w-[200px]"
       autoFocus
+      virtual
     />
   );
 };
@@ -291,23 +284,26 @@ const ActionNameAutocomplete = ({
   const { actionNameAutocomplete, moveAutocomplete, abilityAutocomplete } =
     useContext(EditBattleFormContext);
   const [options, setOptions] = useState<string[]>([]);
+  const [, startTransition] = useTransition();
 
   const onSearch: SelectProps['onSearch'] = (searchText) => {
-    if (type === 'move' && moveAutocomplete) {
-      const list = moveAutocomplete.getSuggestions(searchText) ?? [];
-      setOptions(list);
-      return;
-    }
-    if (type === 'ability' && abilityAutocomplete) {
-      const list = abilityAutocomplete.getSuggestions(searchText) ?? [];
-      setOptions(list);
-      return;
-    }
-    if (actionNameAutocomplete) {
-      const list = actionNameAutocomplete.getSuggestions(searchText) ?? [];
-      setOptions(list);
-      return;
-    }
+    startTransition(() => {
+      if (type === 'move' && moveAutocomplete) {
+        const list = moveAutocomplete.getSuggestions(searchText) ?? [];
+        setOptions(list);
+        return;
+      }
+      if (type === 'ability' && abilityAutocomplete) {
+        const list = abilityAutocomplete.getSuggestions(searchText) ?? [];
+        setOptions(list);
+        return;
+      }
+      if (actionNameAutocomplete) {
+        const list = actionNameAutocomplete.getSuggestions(searchText) ?? [];
+        setOptions(list);
+        return;
+      }
+    });
   };
 
   return (
@@ -400,12 +396,99 @@ const ActionFormFields = ({
   );
 };
 
+interface TurnsTabsProps {
+  fields: FormListFieldData[];
+  add: (defaultValue?: Turn, insertIndex?: number) => void;
+  remove: (index: number | number[]) => void;
+  move: (from: number, to: number) => void;
+  activeTabKey: string;
+  setActiveTabKey: (key: string) => void;
+}
+
+const TurnsTabs = ({
+  fields,
+  add,
+  remove,
+  move,
+  activeTabKey,
+  setActiveTabKey,
+}: TurnsTabsProps) => {
+  const handleAddTurn = () => {
+    const newIndex = fields.length;
+    add(defaultTurn);
+    setActiveTabKey(newIndex.toString());
+  };
+
+  const handleRemoveTurn = (index: number) => {
+    if (activeTabKey === index.toString()) {
+      if (fields.length > 1) {
+        if (index === 0) {
+          setActiveTabKey('0');
+        } else {
+          setActiveTabKey((index - 1).toString());
+        }
+      }
+    } else if (parseInt(activeTabKey) > index) {
+      setActiveTabKey((parseInt(activeTabKey) - 1).toString());
+    }
+    remove(index);
+  };
+
+  const tabItems = fields.map((field, index) => ({
+    key: index.toString(),
+    label: `Turn ${index + 1}`,
+    children:
+      Number(activeTabKey) === index ? (
+        <TurnFormFields
+          namePrefix={['turns']}
+          name={field.name}
+          index={index}
+          remove={() => handleRemoveTurn(index)}
+          move={move}
+          showMoveButtons={false}
+        />
+      ) : null,
+    closable: fields.length > 1,
+  }));
+
+  const onEdit = (
+    targetKey: React.MouseEvent | React.KeyboardEvent | string,
+    action: 'add' | 'remove',
+  ) => {
+    if (action === 'add') {
+      handleAddTurn();
+    } else if (action === 'remove' && typeof targetKey === 'string') {
+      const index = parseInt(targetKey);
+      handleRemoveTurn(index);
+    }
+  };
+
+  const validActiveKey =
+    fields.length > 0
+      ? parseInt(activeTabKey) < fields.length
+        ? activeTabKey
+        : '0'
+      : '0';
+
+  return (
+    <Tabs
+      type="editable-card"
+      activeKey={validActiveKey}
+      onChange={setActiveTabKey}
+      onEdit={onEdit}
+      items={tabItems}
+      addIcon={<PlusOutlined />}
+    />
+  );
+};
+
 interface TurnFormFieldsProps {
   name: FormListFieldData['name'];
   namePrefix?: (string | number)[];
   index: number;
   remove: () => void;
   move: (from: number, to: number) => void;
+  showMoveButtons?: boolean;
 }
 
 const TurnFormFields = ({
@@ -414,16 +497,19 @@ const TurnFormFields = ({
   index,
   remove,
   move,
+  showMoveButtons = true,
 }: TurnFormFieldsProps) => {
   return (
     <Card>
       <Flex className="mb-3" justify="space-between">
         <Text>{`Turn ${index + 1}`}</Text>
-        <Flex gap={3}>
-          <ArrowUpOutlined onClick={() => move(index, index - 1)} />
-          <ArrowDownOutlined onClick={() => move(index, index + 1)} />
-          <MinusCircleOutlined onClick={() => remove()} />
-        </Flex>
+        {showMoveButtons && (
+          <Flex gap={3}>
+            <ArrowUpOutlined onClick={() => move(index, index - 1)} />
+            <ArrowDownOutlined onClick={() => move(index, index + 1)} />
+            <MinusCircleOutlined onClick={() => remove()} />
+          </Flex>
+        )}
       </Flex>
       <FormList name={[baseName, 'actions']}>
         {(fields, { add, remove, move }) => (
@@ -582,6 +668,7 @@ const EditBattle = ({
   trainingId,
   onSuccess,
 }: EditBattleProps) => {
+  const [activeTabKey, setActiveTabKey] = useState('0');
   const { team: _, ...battleData } = battle;
   const initialData: EditBattleFormData = {
     ...battleData,
@@ -649,6 +736,18 @@ const EditBattle = ({
         moveAutocomplete,
         abilityAutocomplete,
         actionNameAutocomplete,
+        baseP1Pokemon: getOptions({
+          searchText: '',
+          player: 'p1',
+          form,
+          pokemonAutocomplete,
+        }),
+        baseP2Pokemon: getOptions({
+          searchText: '',
+          player: 'p2',
+          form,
+          pokemonAutocomplete,
+        }),
       }}
     >
       <BattleForm
@@ -699,28 +798,16 @@ const EditBattle = ({
         </BattleFormItem>
         <FormList name="turns">
           {(fields, { add, remove, move }) => (
-            <Flex gap={10} vertical>
-              {fields.map(({ key, name }, index) => (
-                <TurnFormFields
-                  key={key}
-                  namePrefix={['turns']}
-                  name={name}
-                  index={index}
-                  remove={() => remove(name)}
-                  move={move}
-                />
-              ))}
-              <FormItem>
-                <Button
-                  type="dashed"
-                  block
-                  onClick={() => add(defaultTurn)}
-                  icon={<PlusOutlined />}
-                >
-                  Add turn
-                </Button>
-              </FormItem>
-            </Flex>
+            <FormItem>
+              <TurnsTabs
+                fields={fields}
+                add={add}
+                remove={remove}
+                move={move}
+                activeTabKey={activeTabKey}
+                setActiveTabKey={setActiveTabKey}
+              />
+            </FormItem>
           )}
         </FormList>
         <FormItem>
