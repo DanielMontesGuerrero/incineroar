@@ -5,13 +5,13 @@ import { baseErrorHandler } from '@/src/actions/error-handlers';
 import DBConnection from '@/src/db/DBConnection';
 import { TeamNotFoundError } from '@/src/db/models/team';
 import UserRepository from '@/src/db/models/user';
-import { ErrorResponse, Team } from '@/src/types/api';
-import { DELETE_TEAM } from '@/src/types/endpoints';
+import { ErrorResponse } from '@/src/types/api';
+import { DELETE_TEAM, GET_TEAM } from '@/src/types/endpoints';
 
 export const GET = async (
   req: NextRequest,
   ctx: RouteContext<'/api/user/team/[id]'>,
-): Promise<NextResponse<{ team: Team } | ErrorResponse>> => {
+): Promise<NextResponse<GET_TEAM | ErrorResponse>> => {
   try {
     await DBConnection.connect();
     const userRepo = new UserRepository();

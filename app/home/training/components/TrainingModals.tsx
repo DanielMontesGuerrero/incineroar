@@ -15,10 +15,10 @@ import { queryClient } from '@/src/utils/query-clients';
 
 import FormatInput from '../../components/FormatInput';
 import {
-  AddTrainingActionState,
+  type AddTrainingActionState,
   createTraining,
   editTraining,
-  EditTrainingActionState,
+  type EditTrainingActionState,
 } from '../actions';
 
 const TrainingForm = Form<AddTrainingFormData | EditTrainingFormData>;
@@ -48,7 +48,7 @@ type AddOrEditTrainingAction = (
   form: FormData,
 ) => Promise<AddTrainingActionState | EditTrainingActionState>;
 
-const AddOrEditTrainingModal = (props: AddOrEditTrainingModalProps) => {
+export const AddOrEditTrainingModal = (props: AddOrEditTrainingModalProps) => {
   const { teams, closeModal, isLoading, isOpen } = props;
   const isEdit = !!props.training;
   const initialState = props.training
@@ -119,6 +119,11 @@ const AddOrEditTrainingModal = (props: AddOrEditTrainingModalProps) => {
           <FormItem>
             <Alert message={state.error} type="error" />
           </FormItem>
+        )}
+        {props.training && (
+          <TrainingFormItem name="id" hidden>
+            <Input />
+          </TrainingFormItem>
         )}
         <TrainingFormItem
           name="name"

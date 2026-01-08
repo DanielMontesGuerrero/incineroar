@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { z } from 'zod';
+import { z, ZodType } from 'zod';
 
 import DBConnection from '@/src/db/DBConnection';
 import UserRepository, { UserAlreadyExistsError } from '@/src/db/models/user';
@@ -21,7 +21,7 @@ const signUpDataSchema = z.object({
     .string()
     .min(6, 'Password must be at least 6 characters')
     .max(25, 'Password must be at most 25 characters'),
-});
+}) satisfies ZodType<SignUpData>;
 
 export type SignInActionState = FormActionState<SignInData>;
 

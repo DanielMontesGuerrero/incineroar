@@ -11,9 +11,9 @@ import { FormActionState } from '@/src/types/form';
 import { queryClient } from '@/src/utils/query-clients';
 
 import FormatInput from '../../components/FormatInput';
-import { createTeam, CreateTeamActionState, updateTeam } from '../actions';
+import { createTeam, type CreateTeamActionState, updateTeam } from '../actions';
 
-const TeamFormItem = FormItem<CreateTeamData>;
+const TeamFormItem = FormItem<CreateTeamData | UpdateTeamData>;
 
 const INITIAL_STATE: CreateTeamActionState = {
   success: false,
@@ -36,18 +36,11 @@ type TeamFormProps<T extends CreateTeamData | UpdateTeamData> = {
   isEdit?: boolean;
 };
 
-const TeamForm = <T extends CreateTeamData | UpdateTeamData>(
+export const TeamForm = <T extends CreateTeamData | UpdateTeamData>(
   props: TeamFormProps<T>,
 ) => {
   const CreateOrUpdateForm = Form<T>;
-  const { state, isPending, initialValues } = props;
-  const onFinish = (data: T) => {
-    const newData = data;
-    if (props.isEdit && 'data' in state) {
-      (newData as UpdateTeamData).id = (state.data as UpdateTeamData).id;
-    }
-    props.onFinish(newData);
-  };
+  const { state, isPending, initialValues, onFinish } = props;
   const TeamFormContent = useMemo(
     () => (
       <>
@@ -106,6 +99,11 @@ const TeamForm = <T extends CreateTeamData | UpdateTeamData>(
         <FormItem>
           <Alert message={state.error} type="error" />
         </FormItem>
+      )}
+      {props.isEdit && (
+        <TeamFormItem name="id" hidden>
+          <Input />
+        </TeamFormItem>
       )}
       {TeamFormContent}
     </CreateOrUpdateForm>

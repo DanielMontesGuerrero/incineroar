@@ -191,7 +191,7 @@ const AnalyticsTab = ({ analysis }: AnalyticsTabProps) => {
   return <Tabs tabPosition="left" defaultActiveKey="pokemon" items={items} />;
 };
 
-const Page = ({ params }: { params: Promise<{ id: string }> }) => {
+const Page = ({ params }: PageProps<'/home/metagame/[id]'>) => {
   const { id } = use(params);
   const { data } = useTournamentQuery(id);
 

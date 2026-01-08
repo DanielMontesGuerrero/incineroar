@@ -1,8 +1,8 @@
 import { InboxOutlined, PlusCircleOutlined } from '@ant-design/icons';
-import { Alert, Button, Form, Modal, Select } from 'antd';
+import { Alert, Button, Form, Input, Modal, Select } from 'antd';
 import { useWatch } from 'antd/es/form/Form';
 import FormItem from 'antd/es/form/FormItem';
-import Dragger, { DraggerProps } from 'antd/es/upload/Dragger';
+import Dragger, { type DraggerProps } from 'antd/es/upload/Dragger';
 import { useEffect, useMemo, useState } from 'react';
 
 import { TrainingKeys } from '@/src/constants/query-keys';
@@ -12,19 +12,10 @@ import { BattleDataSource, ImportBattlesFormData } from '@/src/types/form';
 import { readFile } from '@/src/utils/file';
 import { queryClient } from '@/src/utils/query-clients';
 
-import { importBattles, ImportBattlesFormActionState } from '../actions';
+import { importBattles, type ImportBattlesFormActionState } from '../actions';
 
 const ImportForm = Form<ImportBattlesFormData>;
 const ImportFormItem = FormItem<ImportBattlesFormData>;
-
-const INITIAL_STATE: ImportBattlesFormActionState = {
-  success: false,
-  data: {
-    trainingId: '',
-    source: 'showdown-sim-protocol',
-    battles: [],
-  },
-};
 
 interface ImportBattlesModalProps {
   isOpen: boolean;
@@ -44,11 +35,19 @@ const parseFile = (content: string) => {
   return elements[0].innerHTML ?? '';
 };
 
-const ImportBattlesModal = ({
+export const ImportBattlesModal = ({
   closeModal,
   isOpen,
   training,
 }: ImportBattlesModalProps) => {
+  const INITIAL_STATE: ImportBattlesFormActionState = {
+    success: false,
+    data: {
+      trainingId: training.id,
+      source: 'showdown-sim-protocol',
+      battles: [],
+    },
+  };
   const { state, form, onFinish, isPending } =
     useFormAction<ImportBattlesFormData>(INITIAL_STATE, importBattles);
   const [files, setFiles] = useState<DraggerProps['fileList']>([]);
@@ -83,7 +82,6 @@ const ImportBattlesModal = ({
     );
     onFinish({
       ...data,
-      trainingId: training.id,
       battles,
     });
   };
@@ -130,6 +128,9 @@ const ImportBattlesModal = ({
             <Alert message={state.error} type="error" />
           </FormItem>
         )}
+        <ImportFormItem name="trainingId" hidden>
+          <Input />
+        </ImportFormItem>
         <ImportFormItem
           name="source"
           label="Source"
@@ -137,20 +138,22 @@ const ImportBattlesModal = ({
         >
           <Select options={sources} />
         </ImportFormItem>
-        <Dragger
-          multiple
-          accept={acceptedFileExtension}
-          beforeUpload={() => false}
-          fileList={files}
-          onChange={(info) => setFiles(info.fileList)}
-        >
-          <p className="ant-upload-drag-icon">
-            <InboxOutlined />
-          </p>
-          <p className="ant-upload-text">
-            Click or drag files to this area to upload
-          </p>
-        </Dragger>
+        <ImportFormItem name="battles">
+          <Dragger
+            multiple
+            accept={acceptedFileExtension}
+            beforeUpload={() => false}
+            fileList={files}
+            onChange={(info) => setFiles(info.fileList)}
+          >
+            <p className="ant-upload-drag-icon">
+              <InboxOutlined />
+            </p>
+            <p className="ant-upload-text">
+              Click or drag files to this area to upload
+            </p>
+          </Dragger>
+        </ImportFormItem>
       </ImportForm>
     </Modal>
   );

@@ -1,7 +1,7 @@
 'use server';
 
 import { decode } from '@razr/formdata';
-import z from 'zod';
+import z, { ZodType } from 'zod';
 
 import { verifyUserAuth } from '@/src/actions/auth';
 import { baseFormActionErrorHandler } from '@/src/actions/error-handlers';
@@ -15,6 +15,7 @@ import UserRepository from '@/src/db/models/user';
 import BattleParserFactory, {
   BattleMetadata,
 } from '@/src/services/pokemon/battle';
+import { TupleUnion } from '@/src/types';
 import { Action, Battle, Team } from '@/src/types/api';
 import {
   AddTrainingFormData,
@@ -48,7 +49,7 @@ const addTrainingFormDataSchema = z.object({
     .min(1, 'Format must be at least 1 characters')
     .max(50, 'Format must be at most 50 characters')
     .optional(),
-});
+}) satisfies ZodType<AddTrainingFormData>;
 
 export const createTraining = async (
   _state: AddTrainingActionState,
@@ -111,7 +112,7 @@ export type EditTrainingActionState = FormActionState<EditTrainingFormData>;
 
 const updateTrainingFormDataSchema = addTrainingFormDataSchema.extend({
   id: z.string().trim().min(1, 'Invalid trianing ID'),
-});
+}) satisfies ZodType<EditTrainingFormData>;
 
 export const editTraining = async (
   _state: EditTrainingActionState,
@@ -177,8 +178,15 @@ export const editTraining = async (
 
 export type EditBattleFormActionState = FormActionState<EditBattleFormData>;
 
-const actionTypes: Action['type'][] = ['move', 'switch', 'ability', 'effect'];
-const playerTypes: Action['player'][] = ['p1', 'p2'];
+const actionTypes: TupleUnion<Action['type']> = [
+  'move',
+  'switch',
+  'ability',
+  'effect',
+];
+const playerTypes: TupleUnion<
+  Exclude<Action['player'], undefined | 'p3' | 'p4'>
+> = ['p1', 'p2'];
 
 const actionFormDataSchema = z.object({
   index: z.number(),
@@ -197,14 +205,14 @@ const actionFormDataSchema = z.object({
   targets: z
     .array(z.string().max(50, 'At most 100 characters'))
     .max(10, 'At most 10 targets'),
-});
+}) satisfies ZodType<Action>;
 
 const turnFormDataSchema = z.object({
   index: z.number(),
   actions: z.array(actionFormDataSchema),
 });
 
-const battleResults: Exclude<Battle['result'], undefined>[] = [
+const battleResults: TupleUnion<Exclude<Battle['result'], undefined>> = [
   'win',
   'loose',
   'tie',
@@ -236,7 +244,7 @@ const battleFormDataSchema = z.object({
     .optional(),
   notes: z.string().max(1000, 'At most 1000 characters'),
   turns: z.array(turnFormDataSchema),
-});
+}) satisfies ZodType<EditBattleFormData>;
 
 export const editBattle = async (
   _state: EditBattleFormActionState,
@@ -345,9 +353,8 @@ export const createBattle = async (trainingId: string) => {
 
 export type ImportBattlesFormActionState =
   FormActionState<ImportBattlesFormData>;
-const dataSources = [
-  'showdown-sim-protocol',
-] satisfies ReadonlyArray<BattleDataSource>;
+
+const dataSources: TupleUnion<BattleDataSource> = ['showdown-sim-protocol'];
 
 const importBattlesFormDataSchema = z.object({
   trainingId: z.string().min(1, 'Invalid id').max(50, 'Invalid id'),
@@ -367,14 +374,13 @@ const importBattlesFormDataSchema = z.object({
         .max(10000, 'At most 10000 characters'),
     }),
   ),
-});
+}) satisfies ZodType<ImportBattlesFormData>;
 
 export const importBattles = async (
   _state: ImportBattlesFormActionState,
   formData: FormData,
 ): Promise<ImportBattlesFormActionState> => {
   const rawData = decode(formData) as unknown as ImportBattlesFormData;
-  console.log(rawData);
 
   const validatedFields = importBattlesFormDataSchema.safeParse(rawData);
   if (!validatedFields.success) {

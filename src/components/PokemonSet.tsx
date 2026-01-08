@@ -15,7 +15,7 @@ const StatEvs = ({ value, stat }: { value?: number; stat: string }) => {
       <Flex gap={2} className="w-full">
         <Text className="w-[2rem]">{stat}</Text>
         <Progress percent={((value ?? 0) / 252) * 100} showInfo={false} />
-        <Text className="w-[2rem] text-right">{value}</Text>
+        <Text className="w-[2rem] text-right">{value ?? ''}</Text>
       </Flex>
     </Item>
   );
@@ -65,7 +65,7 @@ const PokemonSet = ({ pokemon }: PokemonSetProps) => {
           </Flex>
         </Col>
         <Col span={18}>
-          <Title level={3}>{pokemon.species}</Title>
+          <Title level={3}>{pokemon.species ?? ''}</Title>
           <List>
             <SetPropertyLabel property="Ability" value={pokemon.ability} />
             <SetPropertyLabel property="Item" value={pokemon.item} />

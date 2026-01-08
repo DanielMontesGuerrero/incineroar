@@ -1,6 +1,6 @@
 'use server';
 
-import z from 'zod';
+import z, { ZodType } from 'zod';
 
 import { UnauthorizedError, verifyUserAuth } from '@/src/actions/auth';
 import { baseFormActionErrorHandler } from '@/src/actions/error-handlers';
@@ -42,7 +42,7 @@ const createTeamDataSchema = z.object({
         .max(20, 'Tag must be at most 20 characters'),
     )
     .max(10, 'At most 10 tags are allowed'),
-});
+}) satisfies ZodType<CreateTeamData>;
 
 export const createTeam = async (
   _initialState: CreateTeamActionState,
@@ -92,7 +92,7 @@ export type UpdateTeamActionState = FormActionState<UpdateTeamData>;
 
 const updateTeamDataSchema = createTeamDataSchema.extend({
   id: z.string().trim().min(1, 'Invalid team ID'),
-});
+}) satisfies ZodType<UpdateTeamData>;
 
 export const updateTeam = async (
   _initialState: UpdateTeamActionState,
@@ -107,8 +107,6 @@ export const updateTeam = async (
     format: formData.get('format') as string,
     tags: (formData.getAll('tags') || []) as string[],
   };
-
-  console.debug('Raw update team data:', rawData);
 
   const validatedFields = updateTeamDataSchema.safeParse(rawData);
 

@@ -13,7 +13,7 @@ import { AddTournamentFormData } from '@/src/types/form';
 import { queryClient } from '@/src/utils/query-clients';
 
 import FormatInput from '../../components/FormatInput';
-import { createTournament, CreateTournamentActionState } from '../actions';
+import { createTournament, type CreateTournamentActionState } from '../actions';
 
 const TournamentForm = Form<AddTournamentFormData>;
 const TournamentFormItem = FormItem<AddTournamentFormData>;
@@ -29,12 +29,12 @@ const INITIAL_STATE: CreateTournamentActionState = {
   },
 };
 
-interface AddTournamentModalProps {
+export interface AddTournamentModalProps {
   isOpen: boolean;
   closeModal: () => void;
 }
 
-const AddTournamentModal = ({
+export const AddTournamentModal = ({
   isOpen,
   closeModal,
 }: AddTournamentModalProps) => {

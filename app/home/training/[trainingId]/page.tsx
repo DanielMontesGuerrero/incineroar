@@ -50,7 +50,7 @@ const BattlesTab = ({ training }: BattlesTabProps) => {
   );
 };
 
-const Page = ({ params }: { params: Promise<{ trainingId: string }> }) => {
+const Page = ({ params }: PageProps<'/home/training/[trainingId]'>) => {
   const { trainingId } = use(params);
   const { data } = useTrainingQuery(trainingId);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

@@ -1,7 +1,7 @@
 'use server';
 
 import axios from 'axios';
-import z from 'zod';
+import z, { ZodType } from 'zod';
 
 import { verifyUserAuth } from '@/src/actions/auth';
 import { baseFormActionErrorHandler } from '@/src/actions/error-handlers';
@@ -34,7 +34,7 @@ const addTournamentFormDataSchema = z.object({
     .string()
     .min(1, 'Format must be at least 1 characters')
     .max(50, 'Format must be at most 50 characters'),
-});
+}) satisfies ZodType<AddTournamentFormData>;
 
 export const createTournament = async (
   _state: CreateTournamentActionState,

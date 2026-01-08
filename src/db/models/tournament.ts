@@ -11,6 +11,7 @@ import DBConnection from '../DBConnection';
 import { BaseRepository } from '../repository';
 
 export const TournamentModelName = 'Tournament';
+const teamsService = new TeamService();
 
 const TournamentTeamSchema = new Schema<TournamentTeam>(
   {
@@ -22,7 +23,6 @@ const TournamentTeamSchema = new Schema<TournamentTeam>(
     virtuals: {
       team: {
         get: function (this: TournamentTeam) {
-          const teamsService = new TeamService();
           return teamsService.parseTeam(this.data);
         },
       },

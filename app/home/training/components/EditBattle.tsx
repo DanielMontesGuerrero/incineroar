@@ -370,6 +370,9 @@ const ActionFormFields = ({
 
   return (
     <Flex justify="space-between">
+      <ActionFormItem name={[baseName, 'index']} hidden>
+        <Input />
+      </ActionFormItem>
       <ActionFormItem name={[baseName, 'player']} label="Player">
         <Select className="min-w-[80px]" options={playerOptions} />
       </ActionFormItem>
@@ -511,6 +514,9 @@ const TurnFormFields = ({
           </Flex>
         )}
       </Flex>
+      <FormItem name={[baseName, 'index']} hidden>
+        <Input />
+      </FormItem>
       <FormList name={[baseName, 'actions']}>
         {(fields, { add, remove, move }) => (
           <>
@@ -700,10 +706,12 @@ const EditBattle = ({
     label: name,
     value: id,
   }));
+  const battleTeamPokemon: string[] =
+    battle.team?.parsedTeam
+      .map(({ species }) => species)
+      .filter((p) => p !== undefined) ?? [];
 
   const interceptOnFinish = (data: EditBattleFormData) => {
-    data.trainingId = trainingId;
-    data.id = battle.id;
     data.turns.forEach((turn, index) => {
       turn.index = index;
       turn.actions.forEach((action, actionIndex) => {
@@ -736,12 +744,15 @@ const EditBattle = ({
         moveAutocomplete,
         abilityAutocomplete,
         actionNameAutocomplete,
-        baseP1Pokemon: getOptions({
-          searchText: '',
-          player: 'p1',
-          form,
-          pokemonAutocomplete,
-        }),
+        baseP1Pokemon: [
+          ...getOptions({
+            searchText: '',
+            player: 'p1',
+            form,
+            pokemonAutocomplete,
+          }),
+          ...battleTeamPokemon,
+        ],
         baseP2Pokemon: getOptions({
           searchText: '',
           player: 'p2',
@@ -762,6 +773,12 @@ const EditBattle = ({
             <Alert message={state.error} type="error" />
           </FormItem>
         )}
+        <BattleFormItem name="id" hidden>
+          <Input />
+        </BattleFormItem>
+        <BattleFormItem name="trainingId" hidden>
+          <Input />
+        </BattleFormItem>
         <BattleFormItem
           name="name"
           rules={[{ required: true, message: 'Please enter a name' }]}

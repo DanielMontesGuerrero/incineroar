@@ -2,10 +2,10 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 import { UserKeys } from '../constants/query-keys';
-import { User } from '../types/api';
+import { GET_ME } from '../types/endpoints';
 
-const getUser = async (): Promise<User> => {
-  const result = await axios.get<{ user: User }>('/api/user/me');
+const getUser = async () => {
+  const result = await axios.get<GET_ME>('/api/user/me');
   return result.data.user;
 };
 

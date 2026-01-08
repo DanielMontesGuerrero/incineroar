@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
-import { PokemonClient } from 'pokenode-ts';
 
 import { PokemonKeys } from '../constants/query-keys';
-
-const pokemonClient = new PokemonClient();
+import { pokemonClient } from '../utils/query-clients';
 
 const tryGetPokemonSpeciesByName = async (name: string) => {
   try {

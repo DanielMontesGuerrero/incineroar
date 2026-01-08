@@ -14,7 +14,7 @@ const Page = () => {
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(
     null,
   );
-  const { isLoading, isError, data } = useTrainigsQuery();
+  const { isLoading, data } = useTrainigsQuery();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const defaultTraining = data?.trainings.find(({ isDefault }) => isDefault);
   const trainingsAndBattles = useMemo(() => {
@@ -40,10 +40,6 @@ const Page = () => {
     battles: [],
     description: '',
   };
-
-  if (isError) {
-    return <h1>Error</h1>;
-  }
 
   return (
     <>

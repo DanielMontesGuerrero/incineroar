@@ -9,7 +9,7 @@ import { use } from 'react';
 import PokemonSet from '@/src/components/PokemonSet';
 import { useTeamQuery } from '@/src/hooks/team-queries';
 
-const Page = ({ params }: { params: Promise<{ id: string }> }) => {
+const Page = ({ params }: PageProps<'/home/teams/[id]'>) => {
   const { id } = use(params);
   const { data } = useTeamQuery(id);
 

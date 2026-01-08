@@ -312,7 +312,7 @@ interface TrainingPokemonKeyActionsTableProps {
 export const TrainingPokemonKeyActionsTable = ({
   pokemonKeyActions,
 }: TrainingPokemonKeyActionsTableProps) => {
-  const COLUMNS: TableProps['columns'] = [
+  const COLUMNS: TableProps<PokemonKeyActionAnalytics>['columns'] = [
     {
       title: 'Name',
       dataIndex: 'name',
