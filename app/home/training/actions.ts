@@ -355,6 +355,9 @@ export type ImportBattlesFormActionState =
   FormActionState<ImportBattlesFormData>;
 
 const dataSources: TupleUnion<BattleDataSource> = ['showdown-sim-protocol'];
+const playerOptions: TupleUnion<
+  Exclude<ImportBattlesFormData['battles'][0]['playerTag'], undefined>
+> = ['p1', 'p2', 'p3', 'p4'];
 
 const importBattlesFormDataSchema = z.object({
   trainingId: z.string().min(1, 'Invalid id').max(50, 'Invalid id'),
@@ -372,6 +375,7 @@ const importBattlesFormDataSchema = z.object({
         .string()
         .min(1, 'At leat 1 character')
         .max(10000, 'At most 10000 characters'),
+      playerTag: z.union(playerOptions.map((p) => z.literal(p))).optional(),
     }),
   ),
 }) satisfies ZodType<ImportBattlesFormData>;
@@ -399,9 +403,11 @@ export const importBattles = async (
     const parser = BattleParserFactory.getParser(validatedFields.data.source);
     const trainingId = validatedFields.data.trainingId;
     const promises = validatedFields.data.battles.map((battle) => {
+      console.log('battle playerTag', battle.playerTag);
       const battleMetadata: BattleMetadata = {
         name: battle.name,
         notes: '',
+        playerTag: battle.playerTag ?? 'p1',
       };
       const createBattleData = parser.parse(battleMetadata, battle.data);
       return userRepo.addNewBattle(userId, trainingId, createBattleData);

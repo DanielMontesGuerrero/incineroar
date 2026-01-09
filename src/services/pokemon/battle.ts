@@ -19,7 +19,10 @@ interface ActionWithContext extends Action {
   };
 }
 
-export type BattleMetadata = Omit<CreateBattleData, 'turns' | 'result'>;
+export interface BattleMetadata
+  extends Omit<CreateBattleData, 'turns' | 'result'> {
+  playerTag: Side;
+}
 export type ParserType = BattleDataSource;
 
 export interface BattleParser<T> {
@@ -58,6 +61,7 @@ export const ActionKeyWords = {
 type Side = Exclude<Action['player'], undefined>;
 
 interface SSPPContext {
+  invertSides?: boolean;
   currTurnIndex: number;
   turns: Turn[];
   currActions: ActionWithContext[];
@@ -98,7 +102,7 @@ export class ShowdownSimProtocolParser
       const { args } = this.parseLineData<'|turn|'>(lineData);
       const [_, rawTurnIndex] = args;
       const turnIndex = Number(rawTurnIndex) - 1;
-      if (turnIndex > 1) {
+      if (turnIndex > 0) {
         this.pushTurn(ctx);
       }
       ctx.currTurnIndex = turnIndex;
@@ -123,7 +127,9 @@ export class ShowdownSimProtocolParser
       if (!username) {
         throw new CommandHandlerError('Username is undefined', lineData, ctx);
       }
-      ctx.usernameToPlayerMap[username] = player as 'p1' | 'p2';
+      ctx.usernameToPlayerMap[username] = ctx.invertSides
+        ? this.oppositeSide(player)
+        : player;
     },
     tie: (_lineData, ctx) => {
       ctx.result = 'tie';
@@ -560,7 +566,9 @@ export class ShowdownSimProtocolParser
 
   parse(metadata: BattleMetadata, rawData: string[] | string) {
     const data = typeof rawData === 'string' ? rawData.split('\r\n') : rawData;
-    const { turns, result } = this.parseTurns(data);
+    const { turns, result } = this.parseTurns(data, {
+      invertSides: metadata.playerTag === 'p2',
+    });
     const battle: CreateBattleData = {
       ...metadata,
       turns,
@@ -569,8 +577,12 @@ export class ShowdownSimProtocolParser
     return battle;
   }
 
-  protected parseTurns(data: string[]) {
+  protected parseTurns(
+    data: string[],
+    { invertSides }: { invertSides?: boolean },
+  ) {
     const ctx: SSPPContext = {
+      invertSides,
       currTurnIndex: 0,
       turns: [],
       currActions: [],
@@ -658,10 +670,14 @@ export class ShowdownSimProtocolParser
       };
     }
     const {
-      player,
+      player: _player,
       name: nameOrNickname,
       position,
     } = Protocol.parsePokemonIdent(rawPokemon);
+    let player = _player;
+    if (ctx.invertSides) {
+      player = this.oppositeSide(player);
+    }
     const pokemon =
       ctx.nicknameToPokemonMap[player][nameOrNickname] ?? nameOrNickname;
     return { player, pokemon, taggedPokemon: `${player}:${pokemon}`, position };
@@ -899,7 +915,15 @@ export class ShowdownSimProtocolParser
       ctx.pokemonInPositionMap[player][position] = pokemon;
     }
   }
+
+  protected oppositeSide(side: Side) {
+    if (side === 'p1') return 'p2';
+    if (side === 'p2') return 'p1';
+    throw new CommandHandlerError(`Not implemented opposite side for ${side}`);
+  }
 }
+
+export class ParseError extends Error {}
 
 export class CommandHandlerError extends Error {
   lineData?: (string | undefined)[];

@@ -24,6 +24,7 @@ describe('BattleParser', () => {
     const metadata: BattleMetadata = {
       name: '',
       notes: '',
+      playerTag: 'p1',
     };
 
     beforeAll(() => {});
@@ -42,6 +43,18 @@ describe('BattleParser', () => {
       ];
       const battleB = parser.parse(metadata, linesLoose);
       expect(battleB.result).toEqual('loose');
+    });
+
+    it('should handle inverting sides', () => {
+      const lines = [
+        '|start',
+        '|',
+        '|player|p1|usernamePlayerA|169|1051',
+        '|player|p2|usernamePlayerB|pokekid|1040',
+        '|win|usernamePlayerB',
+      ];
+      const battleB = parser.parse({ ...metadata, playerTag: 'p2' }, lines);
+      expect(battleB.result).toEqual('win');
     });
 
     it('should resolve tie', () => {
@@ -261,6 +274,27 @@ describe('BattleParser', () => {
 
       const switchAction2 = battle.turns[0].actions[1];
       expect(switchAction2.player).toEqual('p1');
+      expect(switchAction2.type).toEqual('switch');
+      expect(switchAction2.name).toEqual('to');
+      expect(switchAction2.user).toEqual('Ursaluna-Bloodmoon');
+      expect(switchAction2.targets).toMatchObject(['Dragonite']);
+    });
+
+    it('should log pokemon switch when sides are inverted', () => {
+      const lines = defaultLines([
+        '|switch|p1a: Ursaluna|Ursaluna-Bloodmoon, L50, M, 100\/100|',
+        '|switch|p1a: Dragonite|Dragonite, L50, M, 100\/100|',
+      ]);
+      const battle = parser.parse({ ...metadata, playerTag: 'p2' }, lines);
+      const switchAction1 = battle.turns[0].actions[0];
+      expect(switchAction1.player).toEqual('p2');
+      expect(switchAction1.type).toEqual('switch');
+      expect(switchAction1.name).toEqual('to');
+      expect(switchAction1.user).toEqual('');
+      expect(switchAction1.targets).toMatchObject(['Ursaluna-Bloodmoon']);
+
+      const switchAction2 = battle.turns[0].actions[1];
+      expect(switchAction2.player).toEqual('p2');
       expect(switchAction2.type).toEqual('switch');
       expect(switchAction2.name).toEqual('to');
       expect(switchAction2.user).toEqual('Ursaluna-Bloodmoon');

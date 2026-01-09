@@ -1,4 +1,4 @@
-import { Battle, CreateTrainingData, Tournament } from './api';
+import { Action, Battle, CreateTrainingData, Tournament } from './api';
 
 export type FormActionState<T> =
   | {
@@ -42,5 +42,6 @@ export type ImportBattlesFormData = {
   battles: {
     name: string;
     data: string;
+    playerTag?: Action['player'];
   }[];
 };
