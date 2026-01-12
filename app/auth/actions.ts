@@ -4,9 +4,9 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z, ZodType } from 'zod';
 
+import { authenticateUser, UnauthorizedError } from '@/src/actions/auth';
 import DBConnection from '@/src/db/DBConnection';
 import UserRepository, { UserAlreadyExistsError } from '@/src/db/models/user';
-import AuthService from '@/src/services/auth';
 import { SignInData, SignUpData } from '@/src/types/api';
 import { FormActionState } from '@/src/types/form';
 
@@ -35,24 +35,19 @@ export const signIn = async (
   };
 
   try {
-    await DBConnection.connect();
+    const jwt = await authenticateUser(rawData);
 
-    const userRepo = new UserRepository();
-    const user = await userRepo.exists(rawData);
-    if (user === undefined) {
+    const cookieStore = await cookies();
+    cookieStore.set('jwt', jwt, { httpOnly: true });
+  } catch (error) {
+    console.error('Failed to sign in user', error);
+    if (error instanceof UnauthorizedError) {
       return {
         success: false,
         data: rawData,
         error: 'Incorrect username or password',
       };
     }
-    const authService = new AuthService();
-    const jwt = await authService.createUserJwt(user);
-
-    const cookieStore = await cookies();
-    cookieStore.set('jwt', jwt, { httpOnly: true });
-  } catch (error) {
-    console.error('Failed to sign in user', error);
     return {
       success: false,
       data: rawData,

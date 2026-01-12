@@ -56,3 +56,12 @@ export interface DELETE_BATTLE {
 export interface GET_TRAINING_ANALYSIS {
   analysis: TrainingAnalytics;
 }
+
+export interface POST_AUTH {
+  jwt: string;
+}
+
+export interface REQ_POST_AUTH {
+  username?: string;
+  password?: string;
+}
