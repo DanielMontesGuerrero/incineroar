@@ -7,6 +7,12 @@ import { verifyUserAuth } from './src/actions/auth';
 const protectedRoutes: Route[] = ['/home'];
 const authRoute: Route = '/auth';
 
+const disabledRoutes: Record<string, Route[]> = {
+  prod: ['/dev'],
+  qa: ['/dev'],
+  dev: ['/dev'],
+};
+
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
 };
@@ -38,6 +44,13 @@ const authRouteProxy = async (req: NextRequest) => {
 
 const proxy = async (req: NextRequest) => {
   const path = req.nextUrl.pathname;
+
+  const isDisabledRoute = (
+    disabledRoutes[process.env.NEXT_PUBLIC_ENVIRONMENT ?? ''] ?? []
+  ).some((route) => path.startsWith(route));
+  if (isDisabledRoute) {
+    return NextResponse.json({}, { status: 404 });
+  }
 
   const isProtectedRoute = protectedRoutes.some((route) =>
     path.startsWith(route),

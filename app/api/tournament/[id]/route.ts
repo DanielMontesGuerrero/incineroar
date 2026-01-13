@@ -16,7 +16,7 @@ export const GET = async (
 ): Promise<NextResponse<GET_TOURNAMENT | ErrorResponse>> => {
   try {
     await DBConnection.connect();
-    await verifyUserAuth();
+    await verifyUserAuth(req);
 
     const tournamentRepo = new TournamentRepository();
     const analyticsService = new AnalyticsService();
@@ -50,7 +50,7 @@ export const DELETE = async (
 ): Promise<NextResponse<DELETE_TOURNAMENT | ErrorResponse>> => {
   try {
     await DBConnection.connect();
-    const { role } = await verifyUserAuth();
+    const { role } = await verifyUserAuth(req);
 
     if (role !== 'admin') {
       throw new UnauthorizedError();

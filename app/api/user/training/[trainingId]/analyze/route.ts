@@ -18,7 +18,7 @@ export const GET = async (
     const userRepo = new UserRepository();
     const analyticsService = new TrainingAnalyticsService();
 
-    const { id: userId } = await verifyUserAuth();
+    const { id: userId } = await verifyUserAuth(req);
     const { trainingId } = await ctx.params;
     const training = await userRepo.getTrainingById(userId, trainingId);
     const analysis = analyticsService.getAnalytics(training);

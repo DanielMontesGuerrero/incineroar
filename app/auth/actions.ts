@@ -84,7 +84,9 @@ export const signUp = async (
     await DBConnection.connect();
 
     const userRepo = new UserRepository();
-    const user = await userRepo.create(validatedFields.data);
+    const { password: _, ...user } = await userRepo.create(
+      validatedFields.data,
+    );
     console.log('User created successfully', user);
   } catch (error) {
     console.error('Failed to create user', error);

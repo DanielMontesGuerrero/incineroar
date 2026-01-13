@@ -20,7 +20,7 @@ describe('SignInForm', () => {
     name: '',
     season: 0,
     format: '',
-    source: '',
+    source: 'pokedata',
     data: '',
   };
 

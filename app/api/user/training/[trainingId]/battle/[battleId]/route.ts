@@ -19,7 +19,7 @@ export const GET = async (
     await DBConnection.connect();
     const userRepo = new UserRepository();
 
-    const { id: userId } = await verifyUserAuth();
+    const { id: userId } = await verifyUserAuth(req);
     const { trainingId, battleId } = await ctx.params;
     const battle = await userRepo.getBattleById(userId, trainingId, battleId);
     return NextResponse.json({ battle });
@@ -49,7 +49,7 @@ export const DELETE = async (
     await DBConnection.connect();
     const userRepo = new UserRepository();
 
-    const { id: userId } = await verifyUserAuth();
+    const { id: userId } = await verifyUserAuth(req);
     const { trainingId, battleId } = await ctx.params;
     await userRepo.deleteBattle(userId, trainingId, battleId);
     return NextResponse.json({ success: true });

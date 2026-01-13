@@ -19,7 +19,7 @@ export type AddTournamentFormData = Pick<
   Tournament,
   'name' | 'season' | 'format'
 > & {
-  source: string;
+  source: 'pokedata' | 'pokedata_url';
   data: string;
 };
 

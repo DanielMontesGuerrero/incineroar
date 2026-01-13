@@ -21,11 +21,19 @@ export interface GET_TOURNAMENTS {
   tournaments: Tournament[];
 }
 
+export interface POST_TOURNAMENT {
+  tournament: Tournament;
+}
+
 export interface GET_ME {
   user: ExposedUser;
 }
 
 export interface GET_TEAM {
+  team: Team;
+}
+
+export interface POST_TEAM {
   team: Team;
 }
 
@@ -37,6 +45,10 @@ export interface GET_TRAININGS {
   trainings: Training[];
 }
 
+export interface POST_TRAINING {
+  training: Training;
+}
+
 export interface GET_TRAINING {
   training: Training;
 }
@@ -46,6 +58,10 @@ export interface DELETE_TRAINING {
 }
 
 export interface GET_BATTLE {
+  battle: Battle;
+}
+
+export interface POST_BATTLE {
   battle: Battle;
 }
 

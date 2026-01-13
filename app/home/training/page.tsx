@@ -25,7 +25,7 @@ const Page = () => {
       ...trainings.filter(({ isDefault }) => !isDefault),
     ];
     trainingsAndBattles.sort(({ createdAt: a }, { createdAt: b }) =>
-      a.localeCompare(b),
+      b.localeCompare(a),
     );
     return trainingsAndBattles.map((t) => ({
       key: t.id,

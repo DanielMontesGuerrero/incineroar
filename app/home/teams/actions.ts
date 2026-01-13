@@ -1,63 +1,31 @@
 'use server';
 
+import { decode } from '@razr/formdata';
 import z, { ZodType } from 'zod';
 
 import { UnauthorizedError, verifyUserAuth } from '@/src/actions/auth';
 import { baseFormActionErrorHandler } from '@/src/actions/error-handlers';
+import {
+  createTeamDataSchema,
+  createTeamForUser,
+  validateCreateTeamData,
+} from '@/src/actions/team';
 import DBConnection from '@/src/db/DBConnection';
 import TeamRepository, { TeamNotFoundError } from '@/src/db/models/team';
-import UserRepository, { UserNotFoundError } from '@/src/db/models/user';
+import { UserNotFoundError } from '@/src/db/models/user';
 import { CreateTeamData, UpdateTeamData } from '@/src/types/api';
 import { FormActionState } from '@/src/types/form';
 
 export type CreateTeamActionState = FormActionState<CreateTeamData>;
 
-const createTeamDataSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Name must be at least 1 characters')
-    .max(40, 'Name must be at most 40 characters'),
-  description: z
-    .string()
-    .max(500, 'Description must be at most 500 characters'),
-  data: z
-    .string()
-    .min(1, 'Data must be at least 1 characters')
-    .max(5000, 'Data must be at most 5000 characters'),
-  season: z
-    .number()
-    .min(2008)
-    .max(new Date().getFullYear() + 1),
-  format: z
-    .string()
-    .min(1, 'Format must be at least 1 characters')
-    .max(50, 'Format must be at most 50 characters'),
-  tags: z
-    .array(
-      z
-        .string()
-        .trim()
-        .min(1, 'Tag must be at least 1 character')
-        .max(20, 'Tag must be at most 20 characters'),
-    )
-    .max(10, 'At most 10 tags are allowed'),
-}) satisfies ZodType<CreateTeamData>;
-
 export const createTeam = async (
   _initialState: CreateTeamActionState,
   formData: FormData,
 ): Promise<CreateTeamActionState> => {
-  const rawData = {
-    name: formData.get('name') as string,
-    description: (formData.get('description') || '') as string,
-    data: formData.get('data') as string,
-    season: Number(formData.get('season')),
-    format: formData.get('format') as string,
-    tags: (formData.getAll('tags') || []) as string[],
-  };
+  const rawData = decode(formData) as unknown as CreateTeamData;
+  rawData.season = Number(rawData.season);
 
-  const validatedFields = createTeamDataSchema.safeParse(rawData);
+  const validatedFields = validateCreateTeamData(rawData);
 
   if (!validatedFields.success) {
     return {
@@ -68,14 +36,11 @@ export const createTeam = async (
   }
 
   try {
-    await DBConnection.connect();
-
-    const userRepo = new UserRepository();
     const { id: userId } = await verifyUserAuth();
-    const team = await userRepo.addNewTeam(userId, validatedFields.data);
+    const team = await createTeamForUser(userId, validatedFields.data);
     console.log('Team created successfully', team);
   } catch (error) {
-    console.error('Failed to create user', error);
+    console.error('Failed to create team', error);
     return baseFormActionErrorHandler(
       error,
       validatedFields.data,
@@ -98,15 +63,8 @@ export const updateTeam = async (
   _initialState: UpdateTeamActionState,
   formData: FormData,
 ): Promise<UpdateTeamActionState> => {
-  const rawData = {
-    id: formData.get('id') as string,
-    name: formData.get('name') as string,
-    description: (formData.get('description') || '') as string,
-    data: formData.get('data') as string,
-    season: Number(formData.get('season')),
-    format: formData.get('format') as string,
-    tags: (formData.getAll('tags') || []) as string[],
-  };
+  const rawData = decode(formData) as unknown as UpdateTeamData;
+  rawData.season = Number(rawData.season);
 
   const validatedFields = updateTeamDataSchema.safeParse(rawData);
 

@@ -16,7 +16,7 @@ export const GET = async (
     await DBConnection.connect();
     const userRepo = new UserRepository();
 
-    const { id: userId } = await verifyUserAuth();
+    const { id: userId } = await verifyUserAuth(req);
     const { id: teamId } = await ctx.params;
     const team = await userRepo.getTeamById(userId, teamId);
 
@@ -43,7 +43,7 @@ export const DELETE = async (
     await DBConnection.connect();
     const userRepo = new UserRepository();
 
-    const { id: userId } = await verifyUserAuth();
+    const { id: userId } = await verifyUserAuth(req);
     const { id: teamId } = await ctx.params;
     await userRepo.deleteTeam(userId, teamId);
     console.log(`Deleted team ${teamId} for user ${userId}`);

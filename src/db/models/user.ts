@@ -68,6 +68,10 @@ export default class UserRepository implements BaseRepository<User> {
     return user.toObject();
   }
 
+  async deleteById(id: string) {
+    return await this.model.findByIdAndDelete(id);
+  }
+
   async create(user: SignUpData, role?: User['role']) {
     const sameUsernameCount = await this.model.countDocuments({
       username: new RegExp(user.username, 'i'),
