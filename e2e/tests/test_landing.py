@@ -3,7 +3,16 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
+from src.models.user import User
 from src.pages.landing import LandingPage
+from src.pages.login import LoginPage
+from src.util.constants import APP_URL, ENVIRONMENT
+
+disabled_routes_map: dict[str, list[str]] = {
+    "dev": [],
+    "qa": ["/dev"],
+    "prod": ["/dev"],
+}
 
 
 class TestLanding:
@@ -22,10 +31,34 @@ class TestLanding:
 
         expect(page).to_have_url(re.compile("/auth"))
 
-    @pytest.mark.skip("Not implemented")
-    def test_enter_app_already_signed_in(self, page: Page):
-        pass
+    @pytest.mark.user("mewtwo")
+    def test_enter_app_already_signed_in(self, page: Page, user: User):
+        login_page = LoginPage(page)
+        login_page.login(user)
 
-    @pytest.mark.skip("Not implemented")
-    def test_protected_routes(self, page: Page):
-        pass
+        expect(page).to_have_url(re.compile("/home"))
+
+        self.landing_page.navigate()
+        expect(page).to_have_url(re.compile("/"))
+        self.landing_page.enter_button.click()
+
+        expect(page).to_have_url(re.compile("/home"))
+
+    @pytest.mark.parametrize("route", [("/home")])
+    def test_protected_routes(self, page: Page, route: str):
+        page.goto(f"{APP_URL}{route}")
+
+        expect(page).to_have_url(re.compile("/auth"))
+
+    @pytest.mark.parametrize("route", [("/auth")])
+    def test_public_routes(self, page: Page, route: str):
+        page.goto(f"{APP_URL}{route}")
+
+        expect(page).to_have_url(re.compile(route))
+
+    @pytest.mark.parametrize("route", disabled_routes_map[ENVIRONMENT])
+    def test_dev_routes(self, page: Page, route: str):
+        response = page.goto(f"{APP_URL}{route}")
+
+        assert response is not None
+        assert response.status == 404
