@@ -12,7 +12,12 @@ class LoginPage:
         self.already_have_account_button = self.page.get_by_role(
             "button", name="I already have an account"
         )
-        self.password_input = self.page.get_by_role("textbox", name="Password")
+        self.password_input = self.page.get_by_role(
+            "textbox", name="Password", exact=True
+        )
+        self.confirm_password_input = self.page.get_by_role(
+            "textbox", name="Confirm password", exact=True
+        )
         self.username_input = self.page.get_by_role("textbox", name="Username")
 
     def navigate(self):
