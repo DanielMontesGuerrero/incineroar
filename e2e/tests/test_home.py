@@ -1,18 +1,75 @@
-import pytest
-from playwright.sync_api import Page
+import re
 
+import pytest
+from playwright.sync_api import Page, expect
+
+from src.models.user import User
 from src.pages.home import HomePage
+from src.pages.login import LoginPage
+from tests.conftest import GetUser
 
 
 class TestHome:
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page):
+    def setup(self, page: Page, get_user: GetUser):
+        user = get_user("mewtwo")
         self.home_page = HomePage(page)
+        self.user = user
 
-    @pytest.mark.skip("Not implemented")
-    def test_side_navigation(self, page: Page):
-        pass
+        login_page = LoginPage(page)
+        login_page.login(user)
+        expect(page).to_have_url(re.compile("/home"))
 
-    @pytest.mark.skip("Not implemented")
+    def test_side_navigation(self, page: Page, subtests: pytest.Subtests):
+        self.home_page.navigate()
+        side_nav_items = [
+            (self.home_page.teams_menu_item, "/teams"),
+            (self.home_page.metagame_menu_item, "/metagame"),
+            (self.home_page.training_menu_item, "/training"),
+        ]
+
+        for item, path in side_nav_items:
+            with subtests.test(f"Menu item {path}", page=page, item=item, path=path):
+                expect(item).to_be_visible()
+
+                item.click()
+
+                expect(page).to_have_url(re.compile(path))
+
     def test_sign_out(self, page: Page):
-        pass
+        self.home_page.navigate()
+        self.home_page.sign_out_menu_item.click()
+
+        expect(page).not_to_have_url(re.compile("/home"))
+
+        self.home_page.navigate()
+
+        expect(page).to_have_url(re.compile("/auth"))
+
+
+class TestAdminHome:
+    @pytest.fixture(autouse=True)
+    def setup(self, page: Page, get_user: GetUser):
+        user = get_user("mew")
+        self.home_page = HomePage(page)
+        self.user = user
+
+        login_page = LoginPage(page)
+        login_page.login(user)
+        expect(page).to_have_url(re.compile("/home"))
+
+    def test_side_navigation(self, page: Page, subtests: pytest.Subtests):
+        self.home_page.navigate()
+        side_nav_items = [
+            (self.home_page.admin_subitems["metagame"], "/metagame"),
+        ]
+
+        for item, path in side_nav_items:
+            with subtests.test(f"Menu item {path}", page=page, item=item, path=path):
+                self.home_page.admin_menu_item.click()
+
+                expect(item).to_be_visible()
+
+                item.click()
+
+                expect(page).to_have_url(re.compile(path))
