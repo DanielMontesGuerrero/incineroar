@@ -70,6 +70,7 @@ const Page = () => {
         </Col>
       </Row>
       <EditTrainingModal
+        isOpen={!!setSelectedTraining}
         closeModal={() => setSelectedTraining(null)}
         training={selectedTraining}
       />

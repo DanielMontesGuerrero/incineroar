@@ -221,6 +221,7 @@ export const editBattle = async (
 ): Promise<EditBattleFormActionState> => {
   const rawData = decode(formData) as unknown as EditBattleFormData;
   rawData.season = rawData?.season ? Number(rawData.season) : undefined;
+  rawData.turns = rawData.turns ?? [];
   rawData?.turns.forEach((turn) => {
     if (!turn) return;
     turn.index = Number(turn.index);

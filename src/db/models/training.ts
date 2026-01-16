@@ -41,7 +41,7 @@ const ActionSchema = new Schema<Action>({
   user: { type: String },
   player: { type: String, enum: PlayerEnumList },
   targets: [{ type: String, required: true }],
-  name: { type: String, required: true },
+  name: { type: String },
 });
 
 const TurnSchema = new Schema<Turn>({
@@ -170,6 +170,15 @@ export default class TrainingRepository implements CRUDRepository<Training> {
   }
 
   async deleteById(id: string): Promise<void> {
+    const training = await this.model.findById(id);
+    if (!training) return;
+    await training.populate('battles');
+
+    const promises = training.battles.map(({ id: battleId }) =>
+      this.battleRepository.deleteById(battleId),
+    );
+    await Promise.all(promises);
+
     await this.model.findByIdAndDelete(id);
   }
 

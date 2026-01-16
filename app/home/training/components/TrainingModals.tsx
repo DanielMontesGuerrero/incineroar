@@ -141,7 +141,7 @@ export const AddOrEditTrainingModal = (props: AddOrEditTrainingModalProps) => {
           <FormatInput additionalYearOptions={[{ value: null }]} />
         </TrainingFormItem>
         <TrainingFormItem name="teamId" label="Team">
-          <Select options={teamsItems} />
+          <Select options={[{ value: null }, ...teamsItems]} />
         </TrainingFormItem>
         <TrainingFormItem
           name="description"
@@ -167,7 +167,7 @@ export const EditTrainingModal = ({
   isOpen,
 }: EditTrainingModalProps) => {
   const { isLoading, data } = useUserQuery();
-  if (!training) return null;
+  if (!training || !isOpen) return null;
   return (
     <AddOrEditTrainingModal
       isOpen={isOpen ?? true}

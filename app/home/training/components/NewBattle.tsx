@@ -23,6 +23,9 @@ const NewBattle = ({ trainingId, onError }: NewBattleProps) => {
     await queryClient.invalidateQueries({
       queryKey: TrainingKeys.training(trainingId),
     });
+    await queryClient.invalidateQueries({
+      queryKey: TrainingKeys.trainings(),
+    });
     router.push(`/home/training/${trainingId}/${battle?.id}?edit=true`);
   };
 
