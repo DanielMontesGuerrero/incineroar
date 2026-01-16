@@ -268,6 +268,8 @@ class TestAdminMetagame(TestMetagame):
         self.metagame_page.navigate_admin()
         self.metagame_page.delete_button("test add raw").click()
 
+        expect(page.locator("tbody")).not_to_contain_text("test add raw")
+
     def test_add_tournament_link(self, page: Page):
         self.metagame_page.add_tournament_button.click()
         self.metagame_page.add_tournament_modal["name"].fill("test add url")
@@ -288,6 +290,8 @@ class TestAdminMetagame(TestMetagame):
 
         self.metagame_page.navigate_admin()
         self.metagame_page.delete_button("test add url").click()
+
+        expect(page.locator("tbody")).not_to_contain_text("test add url")
 
     def test_delete_tournament(self, page: Page):
         expect(page.locator("tbody")).to_contain_text(self.tournaments[0].name)

@@ -1,125 +1,778 @@
-import pytest
-from playwright.sync_api import Page
+import re
+from datetime import datetime
 
+import pytest
+from playwright.sync_api import Page, expect
+
+from src.models.team import Team
+from src.models.training import Action, Battle, Training, Turn
+from src.models.user import User
+from src.pages.login import LoginPage
 from src.pages.training import (
     AnalyzeTrainingPage,
     BattlePage,
     DetailedTrainingPage,
     TrainingsPage,
 )
+from tests.conftest import MakeBattle, MakeTeam, MakeTraining
+
+BASE_TURNS = [
+    Turn(
+        0,
+        [
+            Action(0, "", "switch", "solgaleo", [], "p1"),
+            Action(1, "", "switch", "miraidon", [], "p1"),
+            Action(2, "", "switch", "koraidon", [], "p2"),
+            Action(3, "", "switch", "lunala", [], "p2"),
+        ],
+    ),
+    Turn(
+        1,
+        [
+            Action(
+                0, "flash canon", "move", "solgaleo", ["p2:lunala", "p2:koraidon"], "p1"
+            ),
+            Action(
+                1,
+                "draco meteor",
+                "move",
+                "miraidon",
+                ["p2:lunala", "p2:koraidon"],
+                "p1",
+            ),
+            Action(
+                2,
+                "close combat",
+                "move",
+                "koraidon",
+                ["p1:solgaleo", "p1:miraidon"],
+                "p2",
+            ),
+            Action(
+                3,
+                "moongeist beam",
+                "move",
+                "lunala",
+                ["p1:solgaleo", "p1:miraidon"],
+                "p2",
+            ),
+        ],
+    ),
+    Turn(
+        2,
+        [
+            Action(
+                0, "fainted", "effect", "solgaleo", ["p2:lunala", "p2:koraidon"], "p1"
+            ),
+            Action(
+                1, "fainted", "effect", "miraidon", ["p2:lunala", "p2:koraidon"], "p1"
+            ),
+            Action(
+                2, "fainted", "effect", "koraidon", ["p1:solgaleo", "p1:miraidon"], "p2"
+            ),
+            Action(
+                3, "fainted", "effect", "lunala", ["p1:solgaleo", "p1:miraidon"], "p2"
+            ),
+        ],
+    ),
+]
 
 
-class TestTrainings:
+class TestBaseTraining:
+    username = "mewtwo"
+    user: User
+    trainings: list[Training]
+    teams: list[Team]
+
+    @pytest.fixture(autouse=True, scope="module")
+    def setup_data(
+        self,
+        get_user,
+        make_training: MakeTraining,
+        make_battle: MakeBattle,
+        make_team: MakeTeam,
+    ):
+        user = get_user(self.username)
+        self.__class__.user = user
+        self.__class__.trainings = []
+
+        self.__class__.teams = [
+            make_team(user, Team("team 1", 2025, "reg h", "rayquaza")),
+        ]
+
+        for i in range(6):
+            training = Training(
+                name=f"Test training {i + 1}",
+                description="Sample training description",
+                season=2025,
+                format="reg j",
+            )
+            created_training = make_training(user, training)
+
+            if created_training.id is None:
+                continue
+
+            for j in range(3):
+                turns: list[Turn] = []
+                for turn_idx in range(3):
+                    actions: list[Action] = []
+                    for action_idx in range(3):
+                        if action_idx % 2 == 1:
+                            action = Action(
+                                index=action_idx,
+                                name=f"Action {action_idx + 1}",
+                                type="move",
+                                user="miraidon" if action_idx < 2 else "solgaleo",
+                                targets=["p2:lunala", "p2:koraidon"],
+                                player="p1",
+                            )
+                        else:
+                            action = Action(
+                                index=action_idx,
+                                name=f"Action {action_idx + 1}",
+                                type="move",
+                                user="koraidon" if action_idx < 2 else "lunala",
+                                targets=["p1:solgaleo", "p1:miraidon"],
+                                player="p2",
+                            )
+                        actions.append(action)
+
+                    turn = Turn(index=turn_idx, actions=actions)
+                    turns.append(turn)
+
+                turns.extend(BASE_TURNS)
+                battle = Battle(
+                    name=f"Battle {j + 1}",
+                    notes=f"Test battle {j + 1} for training {i + 1}",
+                    turns=turns,
+                )
+                created_battle = make_battle(user, created_training.id, battle)
+                created_training.battles.append(created_battle)
+
+            self.__class__.trainings.append(created_training)
+
+
+class TestTrainings(TestBaseTraining):
     @pytest.fixture(autouse=True)
     def setup(self, page: Page):
         self.training_page = TrainingsPage(page)
+        login_page = LoginPage(page)
+        login_page.login(self.user)
 
-    @pytest.mark.skip("Not implemented")
+        expect(page).to_have_url(re.compile("/home"))
+
+        self.training_page.navigate()
+
     def test_add_training(self, page: Page):
-        pass
+        """
+        1. Create a new training with these data:
+            - Name: "create training test"
+            - Description: "This is a test training"
+            - Season: 2025
+            - Format: "reg j"
+            - Team: "team 1"
+        2. Verify the training appears in the training list with correct details.
+        3. Clean up by deleting the created training.
+        """
+        # Click add training button
+        self.training_page.add_training_button.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Fill out the training form
+        self.training_page.training_modal["name"].fill("create training test")
+        self.training_page.training_modal["description"].fill("This is a test training")
+        self.training_page.training_modal["season"].click()
+        self.training_page.modal_season_option(2025).click()
+        self.training_page.training_modal["format"].fill("reg j")
+        self.training_page.training_modal["team"].click()
+        self.training_page.modal_team_item(self.teams[0].name).click()
+
+        # Submit the form
+        self.training_page.training_modal["submit"].click()
+
+        # Verify the training appears in the list
+        expect(self.training_page.training_link("create training test")).to_be_visible()
+
+        # Clean up by deleting the created training
+        self.training_page.row_actions_button("create training test").click()
+        self.training_page.row_action_delete_button.click()
+
+        # Verify it's deleted
+        expect(
+            self.training_page.training_link("create training test")
+        ).not_to_be_visible()
+
     def test_edit_training(self, page: Page):
-        pass
+        """
+        1. Edit the training[0] with these data:
+            - Name: "updated test training 1"
+            - Description: "updated description"
+            - Format: "updated"
+            - Team: "team 1"
+        2. Verify the training was updated by opening the edit modal and check the updated values
+        """
+        training = self.trainings[0]
 
-    @pytest.mark.skip("Not implemented")
+        # Open edit modal for first training
+        self.training_page.row_actions_button(training.name).click()
+        self.training_page.row_action_edit_button.click()
+
+        # Update training data
+        self.training_page.training_modal["name"].fill("updated test training 1")
+        self.training_page.training_modal["description"].fill("updated description")
+        self.training_page.training_modal["format"].fill("updated")
+        self.training_page.training_modal["team"].click()
+        self.training_page.modal_team_item(self.teams[0].name).click()
+
+        # Save changes
+        self.training_page.training_modal["update"].click()
+
+        # Verify the training was updated by opening edit modal again
+        self.training_page.row_actions_button("updated test training 1").click()
+        self.training_page.row_action_edit_button.click()
+
+        # Check the updated values
+        expect(self.training_page.training_modal["name"]).to_have_value(
+            "updated test training 1"
+        )
+        expect(self.training_page.training_modal["description"]).to_have_value(
+            "updated description"
+        )
+        expect(self.training_page.training_modal["format"]).to_have_value("updated")
+        expect(page.get_by_text("team 1")).to_be_visible()
+
+        # Cancel to close modal
+        self.training_page.training_modal["cancel"].click()
+
     def test_delete_training(self, page: Page):
-        pass
+        """
+        1. Delete the training[1]
+        2. Verify the training is not present in the list
+        """
+        training = self.trainings[1]
+        expect(self.training_page.training_link(training.name)).to_be_visible()
 
-    @pytest.mark.skip("Not implemented")
+        # Delete the second training
+        self.training_page.row_actions_button(training.name).click()
+        self.training_page.row_action_delete_button.click()
+
+        # Verify the training is not present in the list
+        expect(self.training_page.training_link(training.name)).not_to_be_visible()
+
     def test_add_quick_battle(self, page: Page):
-        pass
+        """
+        1. click on the new battle button
+        2. check that user is redirected to /home/training/[trainingId]/[battleId]
+        3. navigate to training page
+        4. verify the list shows a new battle with title "Battel on mm/dd/yyyy" replace the date placeholder with the current date
+        """
+        # Click on the new battle button
+        self.training_page.new_battle_button.click()
+
+        # Check that user is redirected to training/battle URL
+        expect(page).to_have_url(re.compile(r"/home/training/.+/.+"))
+
+        # Navigate back to training page
+        self.training_page.navigate()
+
+        # Get current date for verification
+        current_date = datetime.now().strftime("%-m/%-d/%Y")
+        expected_title = f"Battle on {current_date}"
+
+        # Verify the list shows a new battle with the expected title
+        expect(page.get_by_text(expected_title)).to_be_visible()
+
+        self.training_page.row_actions_button(expected_title).click()
+        self.training_page.row_action_delete_button.click()
+
+        expect(page.get_by_text(expected_title)).not_to_be_visible()
 
 
-class TestDetailedTraining:
+class TestDetailedTraining(TestBaseTraining):
     @pytest.fixture(autouse=True)
     def setup(self, page: Page):
-        self.detaild_training_page = DetailedTrainingPage(page)
+        self.detailed_training_page = DetailedTrainingPage(page)
+        login_page = LoginPage(page)
+        login_page.login(self.user)
 
-    @pytest.mark.skip("Not implemented")
+        expect(page).to_have_url(re.compile("/home"))
+
+        self.detailed_training_page.navigate(self.trainings[2].id or "")
+
     def test_import_battle(self, page: Page):
-        pass
+        """
+        1. click on "import battle"
+        2. fill the username value with "danimontes"
+        3. click on the file picker
+        4. select the file at data/test_battle_file.html
+        5. click on import
+        6. verify that a battle with name "test_battle_file" is present in the table
+        7. delete the created battle
+        """
+        # Click on import battle button
+        self.detailed_training_page.import_battle_button.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Fill username
+        self.detailed_training_page.import_modal["username"].fill("danimontes")
+
+        # Upload file
+        with page.expect_file_chooser() as fc_info:
+            self.detailed_training_page.import_modal["file-picker"].click()
+        file_chooser = fc_info.value
+        file_chooser.set_files("data/test_battle_file.html")
+
+        # Click import
+        self.detailed_training_page.import_modal["import"].click()
+
+        # Verify battle appears in table
+        expect(
+            self.detailed_training_page.battle_link("test_battle_file")
+        ).to_be_visible()
+
+        # Clean up - delete the created battle
+        self.detailed_training_page.row_actions_button("test_battle_file").click()
+        self.detailed_training_page.delete_action_button.click()
+
+        # Verify it's deleted
+        expect(
+            self.detailed_training_page.battle_link("test_battle_file")
+        ).not_to_be_visible()
+
     def test_add_battle(self, page: Page):
-        pass
+        """
+        1. click on new battle
+        2. verify url is now /home/training/[trainingId]/[battleId]
+        3. go back to /home/training/[trainingId] with trainingId of trainings[2].id
+        4. verify a battle with name "Battle on dd/mm/yyyy" is present in the table,
+           replace the date with the current date without leading zeros.
+        5. delete the created battle
+        """
+        training_id = self.trainings[2].id
 
-    @pytest.mark.skip("Not implemented")
+        # Click on new battle
+        self.detailed_training_page.add_battle_button.click()
+
+        # Verify URL redirected to battle page
+        expect(page).to_have_url(re.compile(rf"/home/training/{training_id}/.+"))
+
+        # Go back to training page
+        self.detailed_training_page.navigate(training_id or "")
+
+        # Get current date for verification
+        current_date = datetime.now().strftime("%-m/%-d/%Y")
+        expected_title = f"Battle on {current_date}"
+
+        # Verify battle appears in table
+        expect(self.detailed_training_page.battle_link(expected_title)).to_be_visible()
+
+        # Clean up - delete the created battle
+        self.detailed_training_page.row_actions_button(expected_title).click()
+        self.detailed_training_page.delete_action_button.click()
+
+        # Verify it's deleted
+        expect(
+            self.detailed_training_page.battle_link(expected_title)
+        ).not_to_be_visible()
+
     def test_edit_training(self, page: Page):
-        pass
+        """
+        1. click on edit button
+        2. fill the modal with the following data:
+            - Description: this is an updated description
+        3. click on update
+        4. click on "Training" tab
+        5. verify the updated description text is visible
+        """
+        # Click on edit button
+        self.detailed_training_page.edit_button.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Fill the description
+        self.detailed_training_page.training_modal["description"].fill(
+            "this is an updated description"
+        )
+
+        # Click update
+        self.detailed_training_page.training_modal["update"].click()
+
+        # Click on Training tab
+        self.detailed_training_page.training_tab.click()
+
+        # Verify the updated description is visible
+        expect(page.get_by_text("this is an updated description")).to_be_visible()
+
     def test_edit_battle(self, page: Page):
-        pass
+        """
+        1. use test_battle as trainings[2].battles[0]
+        2. click on the row actions button for test_battle's row
+        3. select "Edit" option
+        4. verify url is now /home/training/[trainingId]/[battleId]?edit=true
+        """
+        training = self.trainings[2]
+        test_battle = training.battles[0]
+        training_id = training.id
 
-    @pytest.mark.skip("Not implemented")
+        # Click on row actions button for the battle
+        self.detailed_training_page.row_actions_button(test_battle.name).click()
+
+        # Select Edit option
+        self.detailed_training_page.edit_action_button.click()
+
+        # Verify URL contains edit=true
+        expect(page).to_have_url(
+            re.compile(rf"/home/training/{training_id}/{test_battle.id}\?edit=true")
+        )
+
     def test_delete_battle(self, page: Page):
-        pass
+        """
+        1. use test_battle as trainings[2].battles[1]
+        2. click on the row actions button for test_battle's row
+        3. select "Delete" option
+        4. verify test_battle's row is not present in the table
+        """
+        training = self.trainings[2]
+        test_battle = training.battles[1]
 
-    @pytest.mark.skip("Not implemented")
+        # Verify battle is initially visible
+        expect(
+            self.detailed_training_page.battle_link(test_battle.name)
+        ).to_be_visible()
+
+        # Click on row actions button for the battle
+        self.detailed_training_page.row_actions_button(test_battle.name).click()
+
+        # Select Delete option
+        self.detailed_training_page.delete_action_button.click()
+
+        # Verify battle row is not present in the table
+        expect(
+            self.detailed_training_page.battle_link(test_battle.name)
+        ).not_to_be_visible()
+
     def test_analyze(self, page: Page):
-        pass
+        """
+        1. click on "Analyze" button
+        2. verify url is now "/home/training/[trainingId]/analyze"
+        """
+        training_id = self.trainings[2].id
 
-    @pytest.mark.skip("Not implemented")
-    def test_training_details(self, page: Page):
-        pass
+        # Click on Analyze button
+        self.detailed_training_page.analyze_button.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Verify URL is now analyze page
+        expect(page).to_have_url(re.compile(rf"/home/training/{training_id}/analyze"))
+
     def test_go_to_battle(self, page: Page):
-        pass
+        """
+        1. use test_battle as trainings[2].battles[2]
+        2. click on row battle link with name test_battle.name
+        3. verify ur is "/home/training/[trainingId]/[battleId]"
+        """
+        training = self.trainings[2]
+        test_battle = training.battles[2]
+        training_id = training.id
+
+        # Click on battle link
+        self.detailed_training_page.battle_link(test_battle.name).click()
+
+        # Verify URL is battle page
+        expect(page).to_have_url(
+            re.compile(rf"/home/training/{training_id}/{test_battle.id}")
+        )
 
 
-class TestAnalyzeTraining:
+class TestAnalyzeTraining(TestBaseTraining):
+    """
+    solgaleo miraidon
+    lunala koraidon
+    """
+
     @pytest.fixture(autouse=True)
     def setup(self, page: Page):
         self.analyze_training_page = AnalyzeTrainingPage(page)
+        login_page = LoginPage(page)
+        login_page.login(self.user)
 
-    @pytest.mark.skip("Not implemented")
+        expect(page).to_have_url(re.compile("/home"))
+
+        self.analyze_training_page.navigate(self.trainings[3].id or "")
+
     def test_matchups(self, page: Page):
-        pass
+        """
+        1. click on matchups tab
+        2. click on all matches tab
+        3. verify column headers with these names are visible:
+            - Pairings
+            - Pokemon
+            - Usage
+            - Results
+        4. expand row with name "solgaleo"
+        5. verify column headers with these names are shown twice:
+            - Pairings
+            - Pokemon
+            - Usage
+            - Results
+        """
+        # Click on matchups tab
+        self.analyze_training_page.matchups_tab.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Click on all matches tab (it's the same as matchups tab based on the selectors)
+        self.analyze_training_page.all_matches_tab.click()
+
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="Pairings")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Pokemon")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Usage")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Results")).to_be_visible()
+
+        # Expand row with name "solgaleo"
+        self.analyze_training_page.expand_row("solgaleo").click()
+
+        # Verify column headers are shown twice (after expansion)
+        expect(page.get_by_role("columnheader", name="Pairings").nth(1)).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Pokemon").nth(1)).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Usage").nth(1)).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Results").nth(1)).to_be_visible()
+
     def test_openings(self, page: Page):
-        pass
+        """
+        1. click on matchups tab
+        2. click on openings tab
+        3. verify column headers with these names are visible:
+            - Pairings
+            - Pokemon
+            - Usage
+            - Results
+        """
+        # Click on matchups tab
+        self.analyze_training_page.matchups_tab.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Click on openings tab
+        self.analyze_training_page.openings_tab.click()
+
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="Pairings")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Pokemon")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Usage")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Results")).to_be_visible()
+
     def test_usage(self, page: Page):
-        pass
+        """
+        1. click on pokemon tab
+        2. click on usage tab
+        3. verify column headers with these names are visible:
+            - Pokemon
+            - Usage
+        """
+        # Click on pokemon tab
+        self.analyze_training_page.pokemon_tab.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Click on usage tab
+        self.analyze_training_page.usage_tab.click()
+
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="Pokemon")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Usage")).to_be_visible()
+
     def test_moves(self, page: Page):
-        pass
+        """
+        1. click on pokemon tab
+        2. click on moves tab
+        3. verify column headers with these names are visible:
+            - Pokemon
+            - Moves
+        4. expand row with name "solgaleo"
+        5. verify column headers with these names are visible:
+            - Move
+            - Average Usage
+            - Average Usage By Match
+        """
+        # Click on pokemon tab
+        self.analyze_training_page.pokemon_tab.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Click on moves tab
+        self.analyze_training_page.moves_tab.click()
+
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="Pokemon")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Moves")).to_be_visible()
+
+        # Expand row with name "solgaleo"
+        self.analyze_training_page.expand_row("solgaleo").click()
+
+        # Verify expanded column headers
+        expect(
+            page.get_by_role("columnheader", name="Move", exact=True)
+        ).to_be_visible()
+        expect(
+            page.get_by_role("columnheader", name="Average Usage", exact=True)
+        ).to_be_visible()
+        expect(
+            page.get_by_role("columnheader", name="Average Usage By Match", exact=True)
+        ).to_be_visible()
+
     def test_kos(self, page: Page):
-        pass
+        """
+        1. click on pokemon tab
+        2. click on kos tab
+        3. verify column headers with these names are visible:
+            - KOs
+            - Pokemon
+            - Total KOs
+        4. expand row with name "solgaleo"
+        5. verify column headers with these names are visible:
+            - Pokemon
+            - Count
+        """
+        # Click on pokemon tab
+        self.analyze_training_page.pokemon_tab.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Click on kos tab
+        self.analyze_training_page.kos_tab.click()
+
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="KOs", exact=True)).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Pokemon")).to_be_visible()
+        expect(
+            page.get_by_role("columnheader", name="Total KOs", exact=True)
+        ).to_be_visible()
+
+        # Expand row with name "solgaleo"
+        self.analyze_training_page.expand_row("solgaleo").click()
+
+        # Verify expanded column headers
+        expect(page.get_by_role("columnheader", name="Pokemon").nth(1)).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Count")).to_be_visible()
+
     def test_faints(self, page: Page):
-        pass
+        """
+        1. click on pokemon tab
+        2. click on faints tab
+        3. verify column headers with these names are visible:
+            - Faints
+            - Pokemon
+            - Total Faints
+        4. expand row with name "miraidon"
+        5. verify column headers with these names are visible:
+            - Pokemon
+            - Count
+        """
+        # Click on pokemon tab
+        self.analyze_training_page.pokemon_tab.click()
 
-    @pytest.mark.skip("Not implemented")
+        # Click on faints tab
+        self.analyze_training_page.faints_tab.click()
+
+        # Verify column headers are visible
+        expect(
+            page.get_by_role("columnheader", name="Faints", exact=True)
+        ).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Pokemon")).to_be_visible()
+        expect(
+            page.get_by_role("columnheader", name="Total Faints", exact=True)
+        ).to_be_visible()
+
+        # Expand row with name "miraidon"
+        self.analyze_training_page.expand_row("miraidon").click()
+
+        # Verify expanded column headers
+        expect(page.get_by_role("columnheader", name="Pokemon").nth(1)).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Count")).to_be_visible()
+
     def test_key_action_kos(self, page: Page):
-        pass
+        """
+        1. click on key actions tab
+        2. click on kos tab
+        3. verify column headers with these names are visible:
+            - Turn
+            - Count
+        """
+        # Click on key actions tab
+        self.analyze_training_page.key_actions_tab.click()
 
-    @pytest.mark.skip("Not implemented")
-    def test_key_action_faint(self):
-        pass
+        # Click on kos tab
+        self.analyze_training_page.kos_tab.click()
 
-    @pytest.mark.skip("Not implemented")
-    def test_key_action_switch(self):
-        pass
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="Turn")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Count")).to_be_visible()
 
-    @pytest.mark.skip("Not implemented")
-    def test_key_action_my_pokemon(self):
-        pass
+    def test_key_action_faint(self, page: Page):
+        """
+        1. click on key actions tab
+        2. click on faints tab
+        3. verify column headers with these names are visible:
+            - Turn
+            - Count
+        """
+        # Click on key actions tab
+        self.analyze_training_page.key_actions_tab.click()
 
-    @pytest.mark.skip("Not implemented")
-    def test_key_action_riva(self):
-        pass
+        # Click on faints tab
+        self.analyze_training_page.faints_tab.click()
+
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="Turn")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Count")).to_be_visible()
+
+    def test_key_action_switch(self, page: Page):
+        """
+        1. click on key actions tab
+        2. click on switches tab
+        3. verify column headers with these names are visible:
+            - Turn
+            - Count
+        """
+        # Click on key actions tab
+        self.analyze_training_page.key_actions_tab.click()
+
+        # Click on switches tab
+        self.analyze_training_page.switches_tab.click()
+
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="Turn")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Count")).to_be_visible()
+
+    def test_key_action_my_pokemon(self, page: Page):
+        """
+        1. click on key actions tab
+        2. click on my pokemon key actions tab
+        3. verify column headers with these names are visible:
+            - Name
+            - Pokemon Usage
+            - Action Usage
+        """
+        # Click on key actions tab
+        self.analyze_training_page.key_actions_tab.click()
+
+        # Click on my pokemon key actions tab
+        self.analyze_training_page.my_poke_key_actions_tab.click()
+
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="Name")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Pokemon Usage")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Action Usage")).to_be_visible()
+
+    def test_key_action_rival(self, page: Page):
+        """
+        1. click on key actions tab
+        2. click on rival pokemon key actions tab
+        3. verify column headers with these names are visible:
+            - Name
+            - Pokemon Usage
+            - Action Usage
+        """
+        # Click on key actions tab
+        self.analyze_training_page.key_actions_tab.click()
+
+        # Click on rival pokemon key actions tab
+        self.analyze_training_page.rival_poke_key_actions_tab.click()
+
+        # Verify column headers are visible
+        expect(page.get_by_role("columnheader", name="Name")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Pokemon Usage")).to_be_visible()
+        expect(page.get_by_role("columnheader", name="Action Usage")).to_be_visible()
 
 
-class TestBattle:
+class TestBattle(TestBaseTraining):
     @pytest.fixture(autouse=True)
     def setup(self, page: Page):
         self.battle_page = BattlePage(page)

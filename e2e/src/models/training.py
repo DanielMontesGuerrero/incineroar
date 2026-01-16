@@ -35,6 +35,7 @@ class Battle:
 @dataclass
 class Training:
     name: str
+    description: str = ""
     season: Union[int, None] = None
     format: Union[str, None] = None
     team: Union[Team, None] = None

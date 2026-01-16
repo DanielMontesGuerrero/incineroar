@@ -5,6 +5,7 @@ import pytest
 
 from src.models.team import Team
 from src.models.tournament import Tournament
+from src.models.training import Battle, Training
 from src.models.user import User
 from src.util.api import IncineroarAPI, create_authenticated_api
 from src.util.data import load_users
@@ -42,7 +43,7 @@ def get_user() -> GetUser:
 MakeTeam = Callable[[User, Team], Team]
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def make_team() -> Generator[MakeTeam, Any, None]:
     teams: list[tuple[IncineroarAPI, Team]] = []
 
@@ -62,7 +63,7 @@ def make_team() -> Generator[MakeTeam, Any, None]:
 MakeTournament = Callable[[User, Tournament], Tournament]
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def make_tournament() -> Generator[MakeTournament, Any, None]:
     tournaments: list[tuple[IncineroarAPI, Tournament]] = []
 
@@ -77,3 +78,43 @@ def make_tournament() -> Generator[MakeTournament, Any, None]:
     for api, tournament in tournaments:
         if tournament.id is not None:
             api.delete_tournament(tournament.id)
+
+
+MakeTraining = Callable[[User, Training], Training]
+
+
+@pytest.fixture(scope="module")
+def make_training() -> Generator[MakeTraining, Any, None]:
+    trainings: list[tuple[IncineroarAPI, Training]] = []
+
+    def _make_training(user: User, training: Training):
+        api = create_authenticated_api(user.username, user.password)
+        created_training = api.create_training_from_model(training)
+        trainings.append((api, created_training))
+        return created_training
+
+    yield _make_training
+
+    for api, training in trainings:
+        if training.id is not None:
+            api.delete_training(training.id)
+
+
+MakeBattle = Callable[[User, str, Battle], Battle]
+
+
+@pytest.fixture(scope="module")
+def make_battle() -> Generator[MakeBattle, Any, None]:
+    battles: list[tuple[IncineroarAPI, str, Battle]] = []
+
+    def _make_battle(user: User, training_id: str, battle: Battle):
+        api = create_authenticated_api(user.username, user.password)
+        created_battle = api.create_training_battle_from_model(training_id, battle)
+        battles.append((api, training_id, created_battle))
+        return created_battle
+
+    yield _make_battle
+
+    for api, training_id, battle in battles:
+        if battle.id is not None:
+            api.delete_battle(training_id, battle.id)

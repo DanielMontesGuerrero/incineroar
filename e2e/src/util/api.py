@@ -307,6 +307,7 @@ class IncineroarAPI:
             "name": training.name,
             "is_default": training.is_default,
             "battles": [self._battle_to_dict(battle) for battle in training.battles],
+            "description": training.description,
         }
         if training.season is not None:
             result["season"] = training.season
