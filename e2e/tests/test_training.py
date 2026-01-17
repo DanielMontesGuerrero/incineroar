@@ -107,6 +107,12 @@ class TestBaseTraining:
                 season=2025,
                 format="reg j",
             )
+
+            # No format for training 4
+            if i == 4:
+                training.season = None
+                training.format = None
+
             created_training = make_training(user, training)
 
             if created_training.id is None:
@@ -146,6 +152,11 @@ class TestBaseTraining:
                     notes=f"Test battle {j + 1} for training {i + 1}",
                     turns=turns,
                 )
+
+                # Empty battles for training with idx 4
+                if i == 4:
+                    battle = Battle("empty battle", "")
+
                 created_battle = make_battle(user, created_training.id, battle)
                 created_training.battles.append(created_battle)
 
@@ -480,11 +491,6 @@ class TestDetailedTraining(TestBaseTraining):
 
 
 class TestAnalyzeTraining(TestBaseTraining):
-    """
-    solgaleo miraidon
-    lunala koraidon
-    """
-
     @pytest.fixture(autouse=True)
     def setup(self, page: Page):
         self.analyze_training_page = AnalyzeTrainingPage(page)
@@ -776,7 +782,76 @@ class TestBattle(TestBaseTraining):
     @pytest.fixture(autouse=True)
     def setup(self, page: Page):
         self.battle_page = BattlePage(page)
+        login_page = LoginPage(page)
+        login_page.login(self.user)
 
-    @pytest.mark.skip("Not implemented")
-    def test_edit(self):
-        pass
+        expect(page).to_have_url(re.compile("/home"))
+
+        self.battle_page.navigate(
+            self.trainings[4].id or "", self.trainings[4].battles[0].id or ""
+        )
+
+    def test_edit(self, page: Page):
+        self.battle_page.edit_button.click()
+
+        self.battle_page.battle_form["name"].fill("Updated test edit battle")
+        self.battle_page.battle_form["result"].click()
+        self.battle_page.select_option("win").click()
+        self.battle_page.battle_form["season"].click()
+        self.battle_page.select_option("2026").click()
+        self.battle_page.battle_form["format"].click()
+        self.battle_page.battle_form["format"].fill("reg f")
+        self.battle_page.battle_form["teams"].click()
+        self.battle_page.select_option("sample 1").click()
+        self.battle_page.battle_form["notes"].click()
+        self.battle_page.battle_form["notes"].fill("updated notes")
+
+        # Add first turn and action
+        self.battle_page.add_tab_button.click()
+        self.battle_page.get_action_combobox("player").click()
+        self.battle_page.select_option("p1").click()
+        self.battle_page.get_turn_action_type().click()
+        self.battle_page.select_option("switch").click()
+        self.battle_page.get_action_combobox("name").click()
+        self.battle_page.get_action_combobox("targets").click()
+        self.battle_page.get_action_combobox("targets").fill("solgaleo")
+        self.battle_page.get_action_combobox("targets").press("Enter")
+
+        # Add second action to first turn
+        self.battle_page.add_action_button.click()
+        self.battle_page.get_action_player_field(0, 1).click()
+        self.battle_page.select_option("p2", 1).click()
+        self.battle_page.get_turn_action_type("Turn").click()
+        self.battle_page.select_option("switch", 2).click()
+        self.battle_page.get_action_targets_field(0, 1).click()
+        self.battle_page.get_action_targets_field(0, 1).fill("lunala")
+
+        # Add third action to first turn
+        self.battle_page.add_action_button.click()
+
+        # Add second turn
+        self.battle_page.add_tab_button.click()
+        self.battle_page.get_action_combobox("user").click()
+        self.battle_page.get_action_combobox("user").fill("p1:solgaleo")
+        self.battle_page.get_action_combobox("name").click()
+        self.battle_page.get_action_combobox("name").fill("flash-canon")
+        self.battle_page.get_action_combobox("targets").click()
+        self.battle_page.get_action_combobox("targets").fill("p2:lunala")
+        self.battle_page.get_action_combobox("targets").press("Enter")
+
+        # Save changes
+        self.battle_page.battle_form["save"].click()
+
+        # Verify changes
+        expect(page.locator("h2")).to_contain_text("Updated test edit battle")
+        expect(page.get_by_role("main")).to_contain_text("win")
+        expect(page.get_by_role("main")).to_contain_text("2026 - reg f")
+        expect(page.get_by_role("main")).to_contain_text("updated notes")
+        expect(page.get_by_role("main")).to_contain_text("Turn 1")
+        expect(page.get_by_role("main")).to_contain_text("solgaleo")
+        expect(page.get_by_role("main")).to_contain_text("lunala")
+        expect(page.get_by_role("main")).to_contain_text("p1:solgaleo")
+        expect(page.get_by_role("main")).to_contain_text("p2:lunala")
+        expect(page.get_by_role("main")).to_contain_text("flash-canon")
+        expect(page.get_by_role("main")).to_contain_text("Switch")
+        expect(page.get_by_role("main")).to_contain_text("Turn 2")

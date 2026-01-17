@@ -1,3 +1,5 @@
+from typing import Union
+
 from playwright.sync_api import Page
 
 from src.util.constants import APP_URL
@@ -120,3 +122,45 @@ class AnalyzeTrainingPage:
 class BattlePage:
     def __init__(self, page: Page):
         self.page = page
+        self.edit_button = self.page.get_by_role("button", name="edit")
+
+        # Form fields
+        self.battle_form = {
+            "name": self.page.get_by_role("textbox", name="Name"),
+            "result": self.page.get_by_role("combobox", name="result input"),
+            "season": self.page.get_by_role("combobox", name="season select"),
+            "format": self.page.get_by_role("textbox", name="format input"),
+            "teams": self.page.get_by_role("combobox", name="teams select"),
+            "notes": self.page.get_by_role("textbox", name="Notes"),
+            "save": self.page.get_by_role("button", name="Save"),
+        }
+
+        # Turn and action controls
+        self.add_tab_button = self.page.get_by_role("button", name="Add tab")
+        self.add_action_button = self.page.get_by_role("button", name="plus Add action")
+
+    def navigate(self, training_id: str, battle_id: str):
+        self.page.goto(f"{APP_URL}/home/training/{training_id}/{battle_id}")
+
+    def select_option(self, title: str, nth: Union[int, None] = None):
+        selector = self.page.get_by_title(title)
+        if nth is not None:
+            selector = selector.nth(nth)
+        return selector
+
+    def get_action_field(self, turn_index: int, action_index: int, field: str):
+        return self.page.locator(
+            f"#editBattle_turns_{turn_index}_actions_{action_index}_{field}"
+        )
+
+    def get_action_player_field(self, turn_index: int, action_index: int):
+        return self.get_action_field(turn_index, action_index, "player")
+
+    def get_action_targets_field(self, turn_index: int, action_index: int):
+        return self.get_action_field(turn_index, action_index, "targets")
+
+    def get_action_combobox(self, name: str):
+        return self.page.get_by_role("combobox", name=f"{name} input")
+
+    def get_turn_action_type(self, label_name: str = "Turn"):
+        return self.page.get_by_label(label_name).get_by_text("move")
