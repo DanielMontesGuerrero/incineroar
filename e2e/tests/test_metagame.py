@@ -186,30 +186,50 @@ TOURNAMENT_URL = (
 )
 
 
-class TestMetagame:
+class TestBaseMetagame:
     username = "mewtwo"
     user: User
+    admin_user: User
     tournaments: list[Tournament]
 
-    @pytest.fixture(autouse=True, scope="class")
-    def setup_data(self, get_user: GetUser, make_tournament: MakeTournament):
-        admin_user = get_user("mew")
-        self.__class__.user = get_user(self.username)
-        self.__class__.tournaments = [
-            make_tournament(
-                admin_user,
-                Tournament(
-                    "test tournament",
-                    2025,
-                    "reg h",
-                    TOURNAMENT_RAW_DATA,
-                    source="pokedata",
-                ),
-            )
-        ]
 
+@pytest.fixture(autouse=True, scope="module")
+def test_data(get_user: GetUser, make_tournament: MakeTournament):
+    admin_user = get_user("mew")
+    user = get_user(TestBaseMetagame.username)
+    tournaments = [
+        make_tournament(
+            admin_user,
+            Tournament(
+                "test tournament 1",
+                2025,
+                "reg h",
+                TOURNAMENT_RAW_DATA,
+                source="pokedata",
+            ),
+        ),
+        make_tournament(
+            admin_user,
+            Tournament(
+                "test tournament 2",
+                2025,
+                "reg j",
+                TOURNAMENT_RAW_DATA,
+                source="pokedata",
+            ),
+        ),
+    ]
+
+    yield admin_user, user, tournaments
+
+
+class TestMetagame(TestBaseMetagame):
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page):
+    def setup(self, page: Page, test_data):
+        admin_user, user, tournaments = test_data
+        self.admin_user = admin_user
+        self.user = user
+        self.tournaments = tournaments
         self.metagame_page = MetagamePage(page)
         login_page = LoginPage(page)
         login_page.login(self.user)
@@ -219,15 +239,15 @@ class TestMetagame:
         self.metagame_page.navigate()
 
     def test_go_to_tournament(self, page: Page):
-        self.metagame_page.tournament_link("test tournament").click()
+        self.metagame_page.tournament_link("test tournament 1").click()
 
         expect(page).to_have_url(re.compile(f"/home/metagame/{self.tournaments[0].id}"))
-        expect(page.locator("h2")).to_contain_text("test tournament")
+        expect(page.locator("h2")).to_contain_text("test tournament 1")
         expect(page.get_by_role("main")).to_contain_text("2025 - reg h")
         expect(page.locator("tbody")).to_contain_text("user 1")
 
     def test_tournament_analytics(self, page: Page):
-        self.metagame_page.tournament_link("test tournament").click()
+        self.metagame_page.tournament_link("test tournament 1").click()
         expect(page).to_have_url(re.compile(f"/home/metagame/{self.tournaments[0].id}"))
 
         self.metagame_page.analytics_tab.click()
@@ -241,11 +261,19 @@ class TestMetagame:
             ).to_contain_text(f"Cores of {i}")
 
 
-class TestAdminMetagame(TestMetagame):
-    username = "mew"
-
+class TestAdminMetagame(TestBaseMetagame):
     @pytest.fixture(autouse=True)
-    def redirect_admin(self, setup):
+    def setup(self, page: Page, test_data):
+        admin_user, user, tournaments = test_data
+        self.admin_user = admin_user
+        self.user = user
+        self.tournaments = tournaments
+        self.metagame_page = MetagamePage(page)
+        login_page = LoginPage(page)
+        login_page.login(self.admin_user)
+
+        expect(page).to_have_url(re.compile("/home"))
+
         self.metagame_page.navigate_admin()
 
     def test_add_tournament_raw_data(self, page: Page):
@@ -294,8 +322,8 @@ class TestAdminMetagame(TestMetagame):
         expect(page.locator("tbody")).not_to_contain_text("test add url")
 
     def test_delete_tournament(self, page: Page):
-        expect(page.locator("tbody")).to_contain_text(self.tournaments[0].name)
+        expect(page.locator("tbody")).to_contain_text(self.tournaments[1].name)
 
-        self.metagame_page.delete_button(self.tournaments[0].name).click()
+        self.metagame_page.delete_button(self.tournaments[1].name).click()
 
-        expect(page.locator("tbody")).not_to_contain_text(self.tournaments[0].name)
+        expect(page.locator("tbody")).not_to_contain_text(self.tournaments[1].name)

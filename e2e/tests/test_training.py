@@ -84,88 +84,93 @@ class TestBaseTraining:
     trainings: list[Training]
     teams: list[Team]
 
-    @pytest.fixture(autouse=True, scope="module")
-    def setup_data(
-        self,
-        get_user,
-        make_training: MakeTraining,
-        make_battle: MakeBattle,
-        make_team: MakeTeam,
-    ):
-        user = get_user(self.username)
-        self.__class__.user = user
-        self.__class__.trainings = []
 
-        self.__class__.teams = [
-            make_team(user, Team("team 1", 2025, "reg h", "rayquaza")),
-        ]
+@pytest.fixture(autouse=True, scope="module")
+def test_data(
+    get_user,
+    make_training: MakeTraining,
+    make_battle: MakeBattle,
+    make_team: MakeTeam,
+):
+    user = get_user(TestBaseTraining.username)
+    trainings = []
 
-        for i in range(6):
-            training = Training(
-                name=f"Test training {i + 1}",
-                description="Sample training description",
-                season=2025,
-                format="reg j",
+    teams = [
+        make_team(user, Team("team 1", 2025, "reg h", "rayquaza")),
+    ]
+
+    for i in range(6):
+        training = Training(
+            name=f"Test training {i + 1}",
+            description="Sample training description",
+            season=2025,
+            format="reg j",
+        )
+
+        # No format for training 4
+        if i == 4:
+            training.season = None
+            training.format = None
+
+        created_training = make_training(user, training)
+
+        if created_training.id is None:
+            continue
+
+        for j in range(3):
+            turns: list[Turn] = []
+            for turn_idx in range(3):
+                actions: list[Action] = []
+                for action_idx in range(3):
+                    if action_idx % 2 == 1:
+                        action = Action(
+                            index=action_idx,
+                            name=f"Action {action_idx + 1}",
+                            type="move",
+                            user="miraidon" if action_idx < 2 else "solgaleo",
+                            targets=["p2:lunala", "p2:koraidon"],
+                            player="p1",
+                        )
+                    else:
+                        action = Action(
+                            index=action_idx,
+                            name=f"Action {action_idx + 1}",
+                            type="move",
+                            user="koraidon" if action_idx < 2 else "lunala",
+                            targets=["p1:solgaleo", "p1:miraidon"],
+                            player="p2",
+                        )
+                    actions.append(action)
+
+                turn = Turn(index=turn_idx, actions=actions)
+                turns.append(turn)
+
+            turns.extend(BASE_TURNS)
+            battle = Battle(
+                name=f"Battle {j + 1}",
+                notes=f"Test battle {j + 1} for training {i + 1}",
+                turns=turns,
             )
 
-            # No format for training 4
+            # Empty battles for training with idx 4
             if i == 4:
-                training.season = None
-                training.format = None
+                battle = Battle("empty battle", "")
 
-            created_training = make_training(user, training)
+            created_battle = make_battle(user, created_training.id, battle)
+            created_training.battles.append(created_battle)
 
-            if created_training.id is None:
-                continue
+        trainings.append(created_training)
 
-            for j in range(3):
-                turns: list[Turn] = []
-                for turn_idx in range(3):
-                    actions: list[Action] = []
-                    for action_idx in range(3):
-                        if action_idx % 2 == 1:
-                            action = Action(
-                                index=action_idx,
-                                name=f"Action {action_idx + 1}",
-                                type="move",
-                                user="miraidon" if action_idx < 2 else "solgaleo",
-                                targets=["p2:lunala", "p2:koraidon"],
-                                player="p1",
-                            )
-                        else:
-                            action = Action(
-                                index=action_idx,
-                                name=f"Action {action_idx + 1}",
-                                type="move",
-                                user="koraidon" if action_idx < 2 else "lunala",
-                                targets=["p1:solgaleo", "p1:miraidon"],
-                                player="p2",
-                            )
-                        actions.append(action)
-
-                    turn = Turn(index=turn_idx, actions=actions)
-                    turns.append(turn)
-
-                turns.extend(BASE_TURNS)
-                battle = Battle(
-                    name=f"Battle {j + 1}",
-                    notes=f"Test battle {j + 1} for training {i + 1}",
-                    turns=turns,
-                )
-
-                # Empty battles for training with idx 4
-                if i == 4:
-                    battle = Battle("empty battle", "")
-
-                created_battle = make_battle(user, created_training.id, battle)
-                created_training.battles.append(created_battle)
-
-            self.__class__.trainings.append(created_training)
+    yield user, trainings, teams
 
 
 class TestTrainings(TestBaseTraining):
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page):
+    def setup(self, page: Page, test_data):
+        user, trainings, teams = test_data
+        self.user = user
+        self.trainings = trainings
+        self.teams = teams
         self.training_page = TrainingsPage(page)
         login_page = LoginPage(page)
         login_page.login(self.user)
@@ -300,7 +305,11 @@ class TestTrainings(TestBaseTraining):
 
 class TestDetailedTraining(TestBaseTraining):
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page):
+    def setup(self, page: Page, test_data):
+        user, trainings, teams = test_data
+        self.user = user
+        self.trainings = trainings
+        self.teams = teams
         self.detailed_training_page = DetailedTrainingPage(page)
         login_page = LoginPage(page)
         login_page.login(self.user)
@@ -492,7 +501,11 @@ class TestDetailedTraining(TestBaseTraining):
 
 class TestAnalyzeTraining(TestBaseTraining):
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page):
+    def setup(self, page: Page, test_data):
+        user, trainings, teams = test_data
+        self.user = user
+        self.trainings = trainings
+        self.teams = teams
         self.analyze_training_page = AnalyzeTrainingPage(page)
         login_page = LoginPage(page)
         login_page.login(self.user)
@@ -780,7 +793,11 @@ class TestAnalyzeTraining(TestBaseTraining):
 
 class TestBattle(TestBaseTraining):
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page):
+    def setup(self, page: Page, test_data):
+        user, trainings, teams = test_data
+        self.user = user
+        self.trainings = trainings
+        self.teams = teams
         self.battle_page = BattlePage(page)
         login_page = LoginPage(page)
         login_page.login(self.user)

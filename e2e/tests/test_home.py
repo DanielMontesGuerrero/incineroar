@@ -61,7 +61,7 @@ class TestAdminHome:
     def test_side_navigation(self, page: Page, subtests: pytest.Subtests):
         self.home_page.navigate()
         side_nav_items = [
-            (self.home_page.admin_subitems["metagame"], "/metagame"),
+            (self.home_page.admin_subitems["metagame"], "/metagame/admin"),
         ]
 
         for item, path in side_nav_items:
