@@ -657,7 +657,8 @@ export class TrainingAnalyticsService {
           );
           return;
         }
-        tracker.trackMoveUsage(action.name, battle);
+        const move = action.name.replaceAll('-', ' ');
+        tracker.trackMoveUsage(move, battle);
       }
     },
     // track switches
@@ -669,6 +670,7 @@ export class TrainingAnalyticsService {
     },
     // track speed control actions
     (_battle, _turn, { type, user, player: actionPlayer, name }, ctx) => {
+      name = name.replaceAll('-', ' ');
       for (const speedControlAction of TrainingAnalyticsConfig.speedControlMoves) {
         if (
           type === 'move' &&
@@ -697,7 +699,11 @@ export class TrainingAnalyticsService {
           action.player,
         );
         const isRival = player !== 'p1';
-        const name = action.name.split(ActionKeyWords.WEATHER)?.at(-1)?.trim();
+        const name = action.name
+          .split(ActionKeyWords.WEATHER)
+          ?.at(-1)
+          ?.trim()
+          .replaceAll('-', ' ');
         ctx.keyActions.trackPokemonAction(
           'weather control',
           pokemon,
@@ -724,7 +730,7 @@ export class TrainingAnalyticsService {
         if (name?.includes('caused')) {
           name = name.split('caused')?.[1];
         }
-        name = name?.trim();
+        name = name?.trim().replaceAll('-', ' ');
         ctx.keyActions.trackPokemonAction(
           'field control',
           pokemon,
@@ -747,7 +753,7 @@ export class TrainingAnalyticsService {
         const isRival = player !== 'p1';
         let name = action.name.split(ActionKeyWords.TERA)?.at(-1);
         name = name?.replace('to', '');
-        name = name?.trim();
+        name = name?.trim().replaceAll('-', ' ');
         ctx.keyActions.trackPokemonAction(
           'tera',
           pokemon,
@@ -835,6 +841,7 @@ export class TrainingAnalyticsService {
     if (pokemon === undefined) {
       pokemon = playerOrPokemon;
     }
+    pokemon = pokemon.replaceAll('-', ' ');
     return { player, pokemon };
   }
 
