@@ -53,6 +53,7 @@ const Page = () => {
           <AddTraining />
           {defaultTraining && (
             <NewBattle
+              type="default"
               trainingId={defaultTraining.id}
               onError={setErrorMessage}
             />

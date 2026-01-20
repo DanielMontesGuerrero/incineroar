@@ -1,5 +1,5 @@
 import { PlusCircleOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
+import { Button, ButtonProps } from 'antd';
 import { useRouter } from 'next/navigation';
 
 import { TrainingKeys } from '@/src/constants/query-keys';
@@ -10,9 +10,10 @@ import { createBattle } from '../actions';
 interface NewBattleProps {
   trainingId?: string;
   onError?: (message: string) => void;
+  type?: ButtonProps['type'];
 }
 
-const NewBattle = ({ trainingId, onError }: NewBattleProps) => {
+const NewBattle = ({ trainingId, onError, ...props }: NewBattleProps) => {
   const router = useRouter();
   const onNewBattle = async () => {
     if (!trainingId) return;
@@ -35,7 +36,7 @@ const NewBattle = ({ trainingId, onError }: NewBattleProps) => {
 
   return (
     <Button
-      type="primary"
+      type={props.type ?? 'primary'}
       icon={<PlusCircleOutlined />}
       onClick={() => void onNewBattle()}
     >

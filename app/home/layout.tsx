@@ -86,10 +86,10 @@ const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
       label: 'Sign out',
       key: 'signout',
       icon: <LogoutOutlined />,
-      onClick: void (async () => {
+      onClick: () => {
         queryClient.clear();
-        await signOut();
-      }),
+        void signOut();
+      },
     },
   ];
 
@@ -113,10 +113,10 @@ const AppLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
             ) : (
               <Title className="ml-3 text-white">FakeOut Labs</Title>
             )}
-            <Menu theme="dark" mode="inline" items={UpperMenuItems} />
+            <Menu theme="light" mode="inline" items={UpperMenuItems} />
           </Flex>
           <Flex vertical>
-            <Menu theme="dark" mode="inline" items={LowerMenuItems} />
+            <Menu theme="light" mode="inline" items={LowerMenuItems} />
           </Flex>
         </Flex>
       </Sider>

@@ -340,7 +340,7 @@ const importBattlesFormDataSchema = z.object({
       data: z
         .string()
         .min(1, 'At leat 1 character')
-        .max(10000, 'At most 10000 characters'),
+        .max(20000, 'At most 20000 characters'),
       playerTag: z.union(playerOptions.map((p) => z.literal(p))).optional(),
     }),
   ),
@@ -356,7 +356,7 @@ export const importBattles = async (
   if (!validatedFields.success) {
     return {
       success: false,
-      data: rawData,
+      data: JSON.parse(JSON.stringify(rawData)) as ImportBattlesFormData,
       errors: z.treeifyError(validatedFields.error).properties,
     };
   }

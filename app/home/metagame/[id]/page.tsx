@@ -15,6 +15,7 @@ import {
   TeamAnalytics,
   TournamentTeam,
 } from '@/src/types/api';
+import { withKeys } from '@/src/utils/antd-adapters';
 
 const TeamsTable = Table<TournamentTeam>;
 const PokemonAnalyticsTable = Table<PokemonAnalytics>;
@@ -59,7 +60,7 @@ const TeamsTab = ({ teams }: TeamsTabProps) => {
     },
   ];
 
-  return <TeamsTable columns={COLUMNS} dataSource={teams} />;
+  return <TeamsTable columns={COLUMNS} dataSource={withKeys(teams)} />;
 };
 
 interface PokemonAnalyticsTableActionsProps {

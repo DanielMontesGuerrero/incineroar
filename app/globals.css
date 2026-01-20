@@ -7,13 +7,6 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -26,3 +19,63 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ============================
+   DARK THEME AUTOFILL FIX
+============================ */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill {
+  -webkit-text-fill-color: #f5f3f7 !important;
+  caret-color: #f5f3f7;
+
+  /* This is the real fix */
+   box-shadow:
+    0 0 0px 1000px #1d1d27 inset,
+    0 0 0 1px rgba(168, 85, 247, 0.6);
+
+  /* Prevents flashing */
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ============================
+   DARK THEME SCROLLBARS
+============================ */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #33254d #0f0f18;
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0f0f18;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #33254d;
+  border-radius: 10px;
+  border: 2px solid #0f0f18;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.6);
+}
+
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: #c084fc;
+}
+
