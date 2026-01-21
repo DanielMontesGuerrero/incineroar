@@ -151,6 +151,7 @@ export class BattleNotFoundError extends Error {
 export default class TrainingRepository implements CRUDRepository<Training> {
   protected model: Model<Training>;
   protected battleRepository: BattleRepository;
+  static BATTLES_PER_TRAININGS_LIMIT = 1000;
 
   constructor() {
     this.model =
@@ -211,6 +212,14 @@ export default class TrainingRepository implements CRUDRepository<Training> {
   ): Promise<Battle> {
     const training = await this.model.findById(trainingId);
     if (!training) throw new TrainingNotFoundError(trainingId);
+    await training.populate('battles');
+    if (
+      training.battles.length >= TrainingRepository.BATTLES_PER_TRAININGS_LIMIT
+    ) {
+      throw new TrainingStorageExceededError(
+        TrainingRepository.BATTLES_PER_TRAININGS_LIMIT,
+      );
+    }
     const battleData: CreateBattleData = {
       team: training.team,
       season: training.season,
@@ -255,5 +264,13 @@ export class TrainingNotFoundError extends Error {
   constructor(id: string) {
     super(`Training with id ${id} not found`);
     this.id = id;
+  }
+}
+
+export class TrainingStorageExceededError extends Error {
+  limit: number;
+  constructor(limit: number) {
+    super(`Failed to add battle. Exceeded limit of ${limit}`);
+    this.limit = limit;
   }
 }

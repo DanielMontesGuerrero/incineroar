@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { UserNotFoundError } from '../db/models/user';
+import { TrainingStorageExceededError } from '../db/models/training';
+import {
+  UserNotFoundError,
+  UserStorageLimitExceededError,
+} from '../db/models/user';
 import { ErrorResponse } from '../types/api';
 import { MissingDBConnectionError } from '../utils/errors';
 import { UnauthenticatedError, UnauthorizedError } from './auth';
@@ -33,6 +37,22 @@ export const baseErrorHandler = (
       },
     );
   }
+  if (error instanceof UserStorageLimitExceededError) {
+    return NextResponse.json<ErrorResponse>(
+      {
+        message: `Limit of ${error.limit} exceeded.`,
+      },
+      { status: 507 },
+    );
+  }
+  if (error instanceof TrainingStorageExceededError) {
+    return NextResponse.json<ErrorResponse>(
+      {
+        message: `Limit of ${error.limit} exceeded.`,
+      },
+      { status: 507 },
+    );
+  }
   return NextResponse.json<ErrorResponse>(
     { message: 'Unexpected error' },
     {
@@ -61,6 +81,20 @@ export const baseFormActionErrorHandler = <T>(
       success: false,
       data,
       error: 'DB not available',
+    };
+  }
+  if (error instanceof UserStorageLimitExceededError) {
+    return {
+      success: false,
+      data,
+      error: `Can not create, exceeded limit of ${error.limit}`,
+    };
+  }
+  if (error instanceof TrainingStorageExceededError) {
+    return {
+      success: false,
+      data,
+      error: `Can not create, exceeded limit of ${error.limit}`,
     };
   }
   return {

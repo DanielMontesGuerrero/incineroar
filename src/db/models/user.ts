@@ -47,6 +47,8 @@ UserSchema.path('updatedAt').get((val?: Date) => val?.toISOString?.());
 
 export default class UserRepository implements BaseRepository<User> {
   static HASH_SALTS = 5;
+  static TEAMS_LIMIT = 1000;
+  static TRAININGS_LIMIT = 1000;
   protected model: Model<User>;
   protected teamRepository: TeamRepository;
   protected trainingRepository: TrainingRepository;
@@ -122,6 +124,13 @@ export default class UserRepository implements BaseRepository<User> {
   async addNewTeam(id: string, team: CreateTeamData): Promise<Team> {
     const user = await this.model.findById(id);
     if (!user) throw new UserNotFoundError(id);
+    await user.populate('teams');
+    if (user.teams.length >= UserRepository.TEAMS_LIMIT) {
+      throw new UserStorageLimitExceededError(
+        'Create team',
+        UserRepository.TEAMS_LIMIT,
+      );
+    }
     const createdTeam = await this.teamRepository.create(team);
     await this.model.findByIdAndUpdate(id, {
       $push: { teams: createdTeam.id },
@@ -157,6 +166,13 @@ export default class UserRepository implements BaseRepository<User> {
   ): Promise<Training> {
     const user = await this.model.findById(userId);
     if (!user) throw new UserNotFoundError(userId);
+    await user.populate('trainings');
+    if (user.trainings.length >= UserRepository.TRAININGS_LIMIT) {
+      throw new UserStorageLimitExceededError(
+        'Create training',
+        UserRepository.TRAININGS_LIMIT,
+      );
+    }
     const createdTraining = await this.trainingRepository.create(training);
     await this.model.findByIdAndUpdate(userId, {
       $push: { trainings: createdTraining.id },
@@ -283,5 +299,13 @@ export class UserAlreadyExistsError extends Error {
   constructor(user: SignUpData) {
     super(`User with username: ${user.username} already exists`);
     this.user = user;
+  }
+}
+
+export class UserStorageLimitExceededError extends Error {
+  limit: number;
+  constructor(action: string, limit: number) {
+    super(`${action}. Exceeded max limit of ${limit}`);
+    this.limit = limit;
   }
 }

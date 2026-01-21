@@ -17,9 +17,10 @@ const NewBattle = ({ trainingId, onError, ...props }: NewBattleProps) => {
   const router = useRouter();
   const onNewBattle = async () => {
     if (!trainingId) return;
-    const battle = await createBattle(trainingId);
+    const { battle, message } = await createBattle(trainingId);
     if (!battle) {
-      onError?.('Could not create new battle. Try again');
+      onError?.(message ?? 'Could not create new battle. Try again');
+      return;
     }
     await queryClient.invalidateQueries({
       queryKey: TrainingKeys.training(trainingId),

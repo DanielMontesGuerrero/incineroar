@@ -15,6 +15,7 @@ import { TeamNotFoundError } from '@/src/db/models/team';
 import {
   BattleNotFoundError,
   TrainingNotFoundError,
+  TrainingStorageExceededError,
 } from '@/src/db/models/training';
 import UserRepository from '@/src/db/models/user';
 import BattleParserFactory, {
@@ -310,10 +311,16 @@ export const createBattle = async (trainingId: string) => {
       turns: [],
     });
     console.log(`Successfully created battle`, battle);
-    return battle;
+    return { battle };
   } catch (error) {
+    if (error instanceof TrainingStorageExceededError) {
+      return {
+        battle: null,
+        message: `Can not create. Exceeded limit of battles: ${error.limit}`,
+      };
+    }
     console.error('Error creating battle', error);
-    return null;
+    return { battle: null, message: 'Error creating battle. Try again' };
   }
 };
 

@@ -58,6 +58,30 @@ export const theme: ThemeConfig = {
   },
 
   components: {
+    Alert: {
+      /* Base */
+      colorText: '#f5f3f7',
+      colorIcon: '#f5f3f7',
+
+      /* Info */
+      colorInfoBg: '#1a243a',
+      colorInfoBorder: '#2f4fa8',
+
+      /* Success */
+      colorSuccessBg: '#0f2b22',
+      colorSuccessBorder: '#22946e',
+
+      /* Warning */
+      colorWarningBg: '#2b2416',
+      colorWarningBorder: '#a87a2a',
+
+      /* Error */
+      colorErrorBg: '#2b1515',
+      colorErrorBorder: '#9c2121',
+
+      /* Radius & spacing */
+      borderRadiusLG: 8,
+    },
     /* =========================
        Layout
     ========================= */
