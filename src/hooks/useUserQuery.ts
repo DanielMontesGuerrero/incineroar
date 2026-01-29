@@ -5,9 +5,7 @@ import { UserKeys } from '../constants/query-keys';
 import { GET_ME } from '../types/endpoints';
 
 const getUser = async () => {
-  const result = await axios.get<GET_ME>(
-    `${process.env.NEXT_PUBLIC_APP_URL}/api/user/me`,
-  );
+  const result = await axios.get<GET_ME>('/api/user/me');
   return result.data.user;
 };
 
