@@ -1,0 +1,36 @@
+name: Production Seed
+
+on:
+  repository_dispatch:
+    types:
+    - 'vercel.deployment.success'
+
+jobs:
+  seed-production:
+    runs-on: ubuntu-latest
+    if: github.event.client_payload.environment == 'production'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.client_payload.git.sha }}
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.19.5
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run production seed script
+      env:
+        NEXT_PUBLIC_APP_URL: ${{ github.event.client_payload.url }}
+        NEXT_PUBLIC_ENVIRONMENT: prod
+        MONGODB_URI: ${{ secrets.PROD_MONGODB_URI }}
+        JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
+        JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+        BASE_USER_PASSWORDS_MAP: ${{ secrets.BASE_USER_PASSWORDS_MAP }}
+      run: npm run seed

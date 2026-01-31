@@ -10,7 +10,7 @@ const authRoute: Route = '/auth';
 const disabledRoutes: Record<string, Route[]> = {
   prod: ['/dev'],
   qa: ['/dev'],
-  dev: ['/dev'],
+  dev: [],
 };
 
 export const config = {

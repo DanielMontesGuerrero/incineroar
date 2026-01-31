@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [20.19.5]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Check app builds
+      run: npm run build
+
+    - name: Run lint check
+      run: npm run lint
+    
+    - name: Check TypeScript compilation
+      run: npm run compile
+    
+    - name: Generate mocks
+      run: npm run genmocks
+    
+    - name: Run unit tests
+      run: npm test
