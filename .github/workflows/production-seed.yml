@@ -24,6 +24,9 @@ jobs:
     
     - name: Install dependencies
       run: npm ci
+
+    - name: Create dummy .env file
+      run: touch .env
     
     - name: Run production seed script
       env:
